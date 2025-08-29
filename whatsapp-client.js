@@ -41,8 +41,11 @@ class WhatsAppManager {
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu'
-          ]
+            '--disable-gpu',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
+          ],
+          executablePath: process.env.CHROME_PATH || undefined
         }
       });
 
