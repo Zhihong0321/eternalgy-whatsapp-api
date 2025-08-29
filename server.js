@@ -4,8 +4,17 @@ const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
   res.json({ 
-    status: 'Infrastructure Setup Complete',
-    message: 'WhatsApp API Server - Ready for coding phase',
+    status: 'TESTING - GitHub Auto Deploy',
+    message: 'This should override existing deployment',
+    timestamp: new Date().toISOString(),
+    source: 'GitHub Repository',
+    commit: 'Testing deployment override'
+  });
+});
+
+app.get('/test-deploy', (req, res) => {
+  res.json({
+    message: 'This endpoint confirms our code is deployed',
     timestamp: new Date().toISOString()
   });
 });
