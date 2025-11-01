@@ -69,15 +69,31 @@ app.post('/api/logout', async (req, res) => {
     }
 });
 
+const dns = require('dns');
+
+async function checkInternetConnection() {
+    return new Promise((resolve) => {
+        dns.lookup('google.com', (err) => {
+            if (err && err.code === 'ENOTFOUND') {
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        });
+    });
+}
+
 app.get('/', async (req, res) => {
     const store = new PostgresStore();
     const dbConnected = await store.checkConnection();
+    const internetConnected = await checkInternetConnection();
 
     let html = `
         <h1>WhatsApp API Status</h1>
         <p><strong>WhatsApp Status:</strong> ${status}</p>
         <p><strong>Phone Number:</strong> ${phoneNumber || 'Not Connected'}</p>
         <p><strong>Database Status:</strong> ${dbConnected ? 'Connected' : 'Disconnected'}</p>
+        <p><strong>Internet Status:</strong> ${internetConnected ? 'Connected' : 'Disconnected'}</p>
     `;
 
     if (status === 'waiting_qr') {
@@ -98,10 +114,15 @@ app.get('/', async (req, res) => {
 // Main async function to handle initialization
 async function initialize() {
     console.log('Initializing WhatsApp client...');
+    status = 'initializing';
     try {
+        console.log('Creating PostgresStore...');
         const store = new PostgresStore();
+        console.log('Initializing PostgresStore...');
         await store.init(); // Ensure the database is ready
+        console.log('PostgresStore initialized.');
 
+        console.log('Creating WhatsApp client...');
         client = new Client({
             authStrategy: new RemoteAuth({
                 store: store,
@@ -114,6 +135,7 @@ async function initialize() {
                 ]
             }
         });
+        console.log('WhatsApp client created.');
 
         client.on('qr', qr => {
             console.log('QR code received');
@@ -136,6 +158,7 @@ async function initialize() {
             console.log('Client was disconnected', reason);
 
             if (reason === 'LOGOUT') {
+                console.log('Client logged out, re-initializing...');
                 if (client) {
                     await client.destroy();
                 }
@@ -166,7 +189,9 @@ async function initialize() {
             }
         });
 
+        console.log('Initializing WhatsApp client...');
         await client.initialize();
+        console.log('WhatsApp client initialized.');
 
     } catch (error) {
         console.error('Initialization failed:', error);
