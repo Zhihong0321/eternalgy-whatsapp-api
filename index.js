@@ -1,4 +1,4 @@
-const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { Client, RemoteAuth, Events } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
 const FileStore = require('./FileStore');
@@ -21,6 +21,13 @@ const REMOTE_AUTH_CLIENT_ID = 'remote-session';
 const REMOTE_AUTH_SESSION_NAME = `RemoteAuth-${REMOTE_AUTH_CLIENT_ID}`;
 const REMOTE_AUTH_DATA_PATH = path.resolve('./.wwebjs_auth/');
 const REMOTE_AUTH_REQUIRED_DIRS = ['Default', 'IndexedDB', 'Local Storage'];
+const FILE_STORE_OPTIONS = {
+    archiveDirectories: [
+        REMOTE_AUTH_DATA_PATH,
+        path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME)
+    ]
+};
+const sharedStore = new FileStore(FILE_STORE_OPTIONS);
 
 async function ensureRemoteAuthSkeleton(store) {
     try {
@@ -30,6 +37,7 @@ async function ensureRemoteAuthSkeleton(store) {
             return;
         }
 
+        await fs.promises.mkdir(REMOTE_AUTH_DATA_PATH, { recursive: true });
         await fs.promises.mkdir(path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME), { recursive: true });
         await Promise.all(REMOTE_AUTH_REQUIRED_DIRS.map(dir =>
             fs.promises.mkdir(path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME, dir), { recursive: true })
@@ -109,8 +117,7 @@ async function checkInternetConnection() {
 }
 
 app.get('/', async (req, res) => {
-    const store = new FileStore();
-    const storedSessionExists = await store.sessionExists({ session: REMOTE_AUTH_SESSION_NAME });
+    const storedSessionExists = await sharedStore.sessionExists({ session: REMOTE_AUTH_SESSION_NAME });
     const internetConnected = await checkInternetConnection();
 
     let html = `
@@ -142,7 +149,7 @@ async function initialize() {
     status = 'initializing';
     try {
         console.log('Setting up FileStore...');
-        const store = new FileStore();
+        const store = sharedStore;
         await ensureRemoteAuthSkeleton(store);
         console.log('FileStore ready.');
 
@@ -174,6 +181,7 @@ async function initialize() {
             status = 'connected';
             phoneNumber = client.info.wid.user;
             console.log('Client is ready!');
+            forceImmediateRemoteBackup().catch(() => {});
         });
 
         client.on('disconnected', async (reason) => {
@@ -194,6 +202,10 @@ async function initialize() {
         client.on('auth_failure', (msg) => {
             status = 'auth_failure';
             console.error('Authentication failure', msg);
+        });
+
+        client.on(Events.REMOTE_SESSION_SAVED, () => {
+            console.log('[RemoteAuth] Session backup saved to FileStore.');
         });
 
         client.on('message', async (message) => {
@@ -221,6 +233,20 @@ async function initialize() {
     } catch (error) {
         console.error('Initialization failed:', error);
         status = 'failed';
+    }
+}
+
+async function forceImmediateRemoteBackup() {
+    if (!client || !client.authStrategy || typeof client.authStrategy.storeRemoteSession !== 'function') {
+        return;
+    }
+
+    try {
+        console.log('[RemoteAuth] Triggering immediate session backup...');
+        await client.authStrategy.storeRemoteSession({ emit: true });
+        console.log('[RemoteAuth] Immediate session backup complete.');
+    } catch (error) {
+        console.error('[RemoteAuth] Immediate session backup failed:', error);
     }
 }
 
