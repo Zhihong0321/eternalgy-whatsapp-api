@@ -36,7 +36,17 @@ class PostgresStore {
     async extract(options) {
         const { session } = options;
         const result = await this.pool.query('SELECT session_data FROM wweb_sessions WHERE session_key = $1', [session]);
-        return result.rows[0] ? JSON.parse(result.rows[0].session_data) : null;
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(result.rows[0].session_data);
+        } catch (error) {
+            console.error('Failed to parse session data, deleting corrupted session:', error);
+            await this.delete(options);
+            return null;
+        }
     }
 
     async delete(options) {
