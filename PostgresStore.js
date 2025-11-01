@@ -1,6 +1,21 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 
+function waitForFile(filePath, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const interval = setInterval(() => {
+            if (fs.existsSync(filePath)) {
+                clearInterval(interval);
+                resolve();
+            } else if (Date.now() - startTime > timeout) {
+                clearInterval(interval);
+                reject(new Error(`File not found after ${timeout}ms: ${filePath}`));
+            }
+        }, 100);
+    });
+}
+
 class PostgresStore {
     constructor() {
         try {
@@ -31,6 +46,7 @@ class PostgresStore {
         const sessionFilePath = `${session}.zip`;
         
         try {
+            await waitForFile(sessionFilePath);
             const fileBuffer = fs.readFileSync(sessionFilePath);
             await this.pool.query(
                 'INSERT INTO wweb_sessions (session_key, session_data) VALUES ($1, $2) ON CONFLICT (session_key) DO UPDATE SET session_data = $2',
