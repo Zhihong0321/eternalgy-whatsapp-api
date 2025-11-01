@@ -29,6 +29,12 @@ let webhookUrl = null;
 let restarting = false;
 
 const store = new PostgresStore();
+const remoteAuthStore = {
+    save: (...args) => store.save(...args),
+    extract: (...args) => store.extract(...args),
+    delete: (...args) => store.delete(...args),
+    sessionExists: (...args) => store.sessionExists(...args)
+};
 let initializePromise = null;
 let initializing = false;
 
@@ -41,6 +47,17 @@ async function ensureStoreReady() {
     }
 }
 
+// Ensure we don't tear down a browser instance while it's still booting.
+async function waitForOngoingInitialization() {
+    if (initializing && initializePromise) {
+        try {
+            await initializePromise;
+        } catch (error) {
+            console.warn('Previous initialization failed while waiting to restart:', error);
+        }
+    }
+}
+
 async function restartClient(trigger) {
     if (restarting) {
         console.log(`Restart already in progress, ignoring trigger: ${trigger}`);
@@ -50,6 +67,8 @@ async function restartClient(trigger) {
     restarting = true;
 
     try {
+        await waitForOngoingInitialization();
+
         if (client) {
             try {
                 await client.destroy();
@@ -184,7 +203,7 @@ async function initialize() {
             console.log('Creating WhatsApp client...');
             client = new Client({
                 authStrategy: new RemoteAuth({
-                    store: store,
+                    store: remoteAuthStore,
                     clientId: 'remote-session',
                     backupSyncIntervalMs: 300000
                 }),
