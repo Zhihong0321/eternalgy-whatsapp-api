@@ -33,7 +33,7 @@ class PostgresStore {
         );
     }
 
-    async get(options) {
+    async extract(options) {
         const { session } = options;
         const result = await this.pool.query('SELECT session_data FROM wweb_sessions WHERE session_key = $1', [session]);
         return result.rows[0] ? JSON.parse(result.rows[0].session_data) : null;
