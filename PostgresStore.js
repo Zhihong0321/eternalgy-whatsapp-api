@@ -44,7 +44,10 @@ class PostgresStore {
     async save(options) {
         const { session } = options;
         const sessionFilePath = `${session}.zip`;
-        
+
+        // Wait for a short period to allow the file to be written
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         try {
             await waitForFile(sessionFilePath);
             const fileBuffer = fs.readFileSync(sessionFilePath);

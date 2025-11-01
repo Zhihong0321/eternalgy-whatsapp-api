@@ -126,6 +126,7 @@ async function initialize() {
         client = new Client({
             authStrategy: new RemoteAuth({
                 store: store,
+                clientId: 'remote-session',
                 backupSyncIntervalMs: 300000
             }),
             puppeteer: {
