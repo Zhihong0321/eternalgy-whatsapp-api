@@ -69,19 +69,28 @@ app.post('/api/logout', async (req, res) => {
     }
 });
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
+    const store = new PostgresStore();
+    const dbConnected = await store.checkConnection();
+
+    let html = `
+        <h1>WhatsApp API Status</h1>
+        <p><strong>WhatsApp Status:</strong> ${status}</p>
+        <p><strong>Phone Number:</strong> ${phoneNumber || 'Not Connected'}</p>
+        <p><strong>Database Status:</strong> ${dbConnected ? 'Connected' : 'Disconnected'}</p>
+    `;
+
     if (status === 'waiting_qr') {
         qrcodeDataURL.toDataURL(qrCode, (err, url) => {
             if (err) {
                 res.status(500).send('Error generating QR code');
             } else {
-                res.send(`<h1>QR Code</h1><img src="${url}" alt="QR Code">`);
+                html += `<h2>QR Code</h2><img src="${url}" alt="QR Code">`;
+                res.send(html);
             }
         });
-    } else if (status === 'connected') {
-        res.send(`<h1>WhatsApp Connected</h1><p>Phone Number: ${phoneNumber}</p>`);
     } else {
-        res.send(`<h1>WhatsApp Status: ${status}</h1>`);
+        res.send(html);
     }
 });
 

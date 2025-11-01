@@ -49,6 +49,16 @@ class PostgresStore {
         const result = await this.pool.query('SELECT 1 FROM wweb_sessions WHERE session_key = $1', [session]);
         return result.rowCount > 0;
     }
+
+    async checkConnection() {
+        try {
+            await this.pool.query('SELECT 1');
+            return true;
+        } catch (error) {
+            console.error('Database connection check failed:', error);
+            return false;
+        }
+    }
 }
 
 module.exports = PostgresStore;
