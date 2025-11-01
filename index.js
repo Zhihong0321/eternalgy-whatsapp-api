@@ -7,68 +7,16 @@ const bodyParser = require('body-parser');
 const app = express();
 app.use(bodyParser.json());
 
-const store = new PostgresStore();
-
-const client = new Client({
-    authStrategy: new RemoteAuth({
-        store: store,
-        backupSyncIntervalMs: 300000
-    }),
-    puppeteer: {
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-        ]
-    }
-});
-
+// Define all variables that will be used in routes
+let client;
 let qrCode = null;
-let status = 'disconnected';
+let status = 'initializing';
 let phoneNumber = null;
-
-client.on('qr', qr => {
-    qrCode = qr;
-    status = 'waiting_qr';
-});
-
-client.on('ready', () => {
-    qrCode = null;
-    status = 'connected';
-    phoneNumber = client.info.wid.user;
-    console.log('Client is ready!');
-});
-
-client.on('disconnected', () => {
-    qrCode = null;
-    status = 'disconnected';
-    phoneNumber = null;
-    console.log('Client was disconnected');
-});
-
 let webhookUrl = null;
 
-client.on('message', async (message) => {
-    if (webhookUrl) {
-        try {
-            await fetch(webhookUrl, {
-                method: 'POST',
-                body: JSON.stringify(message.rawData),
-                headers: { 'Content-Type': 'application/json' }
-            });
-        } catch (error) {
-            console.error('Failed to send webhook:', error);
-        }
-    }
-
-	if(message.body === '!ping') {
-		message.reply('pong');
-	}
-});
-
-client.initialize();
-
+// Define all routes
 app.get('/api/status', (req, res) => {
-    res.json({ 
+    res.json({
         status: status,
         phoneNumber: phoneNumber,
         hasQrCode: qrCode !== null
@@ -85,7 +33,7 @@ app.get('/api/qr', (req, res) => {
 
 app.post('/api/send', async (req, res) => {
     const { to, message } = req.body;
-    if (status === 'connected') {
+    if (status === 'connected' && client) {
         try {
             const msg = await client.sendMessage(to, message);
             res.json({ success: true, messageId: msg.id._serialized, timestamp: msg.timestamp });
@@ -93,7 +41,7 @@ app.post('/api/send', async (req, res) => {
             res.status(500).json({ success: false, message: 'Failed to send message', error: error.message });
         }
     } else {
-        res.status(400).json({ success: false, message: 'Client is not connected' });
+        res.status(400).json({ success: false, message: 'Client is not connected or ready' });
     }
 });
 
@@ -108,11 +56,15 @@ app.get('/api/webhook/config', (req, res) => {
 });
 
 app.post('/api/logout', async (req, res) => {
-    try {
-        await client.logout();
-        res.json({ success: true, message: 'Session cleared' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to logout', error: error.message });
+    if (client) {
+        try {
+            await client.logout();
+            res.json({ success: true, message: 'Session cleared' });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Failed to logout', error: error.message });
+        }
+    } else {
+        res.status(400).json({ success: false, message: 'Client is not initialized' });
     }
 });
 
@@ -128,11 +80,88 @@ app.get('/', (req, res) => {
     } else if (status === 'connected') {
         res.send(`<h1>WhatsApp Connected</h1><p>Phone Number: ${phoneNumber}</p>`);
     } else {
-        res.send(`<h1>WhatsApp Disconnected</h1>`);
+        res.send(`<h1>WhatsApp Status: ${status}</h1>`);
     }
 });
 
+
+// Main async function to handle initialization
+async function initialize() {
+    console.log('Initializing WhatsApp client...');
+    try {
+        const store = new PostgresStore();
+        await store.init(); // Ensure the database is ready
+
+        client = new Client({
+            authStrategy: new RemoteAuth({
+                store: store,
+                backupSyncIntervalMs: 300000
+            }),
+            puppeteer: {
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox'
+                ]
+            }
+        });
+
+        client.on('qr', qr => {
+            console.log('QR code received');
+            qrCode = qr;
+            status = 'waiting_qr';
+        });
+
+        client.on('ready', () => {
+            qrCode = null;
+            status = 'connected';
+            phoneNumber = client.info.wid.user;
+            console.log('Client is ready!');
+        });
+
+        client.on('disconnected', (reason) => {
+            qrCode = null;
+            status = 'disconnected';
+            phoneNumber = null;
+            console.log('Client was disconnected', reason);
+            // Optional: try to re-initialize
+            // initialize();
+        });
+
+        client.on('auth_failure', (msg) => {
+            status = 'auth_failure';
+            console.error('Authentication failure', msg);
+        });
+
+        client.on('message', async (message) => {
+            if (webhookUrl) {
+                try {
+                    await fetch(webhookUrl, {
+                        method: 'POST',
+                        body: JSON.stringify(message.rawData),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (error) {
+                    console.error('Failed to send webhook:', error);
+                }
+            }
+
+            if(message.body === '!ping') {
+                message.reply('pong');
+            }
+        });
+
+        await client.initialize();
+
+    } catch (error) {
+        console.error('Initialization failed:', error);
+        status = 'failed';
+    }
+}
+
+// Start the server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
+    // Initialize the WhatsApp client after the server has started
+    initialize();
 });
