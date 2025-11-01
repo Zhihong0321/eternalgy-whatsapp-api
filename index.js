@@ -1,5 +1,6 @@
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const qrcodeDataURL = require('qrcode');
 const PostgresStore = require('./PostgresStore');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -70,7 +71,7 @@ app.post('/api/logout', async (req, res) => {
 
 app.get('/', (req, res) => {
     if (status === 'waiting_qr') {
-        qrcode.toDataURL(qrCode, (err, url) => {
+        qrcodeDataURL.toDataURL(qrCode, (err, url) => {
             if (err) {
                 res.status(500).send('Error generating QR code');
             } else {
