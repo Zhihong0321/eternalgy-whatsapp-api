@@ -1,7 +1,7 @@
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
-const PostgresStore = require('./PostgresStore');
+const FileStore = require('./FileStore');
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -84,15 +84,15 @@ async function checkInternetConnection() {
 }
 
 app.get('/', async (req, res) => {
-    const store = new PostgresStore();
-    const dbConnected = await store.checkConnection();
+    const store = new FileStore();
+    const storedSessionExists = await store.sessionExists({ session: 'RemoteAuth-remote-session' });
     const internetConnected = await checkInternetConnection();
 
     let html = `
         <h1>WhatsApp API Status</h1>
         <p><strong>WhatsApp Status:</strong> ${status}</p>
         <p><strong>Phone Number:</strong> ${phoneNumber || 'Not Connected'}</p>
-        <p><strong>Database Status:</strong> ${dbConnected ? 'Connected' : 'Disconnected'}</p>
+        <p><strong>Stored Session Available:</strong> ${storedSessionExists ? 'Yes' : 'No'}</p>
         <p><strong>Internet Status:</strong> ${internetConnected ? 'Connected' : 'Disconnected'}</p>
     `;
 
@@ -116,11 +116,9 @@ async function initialize() {
     console.log('Initializing WhatsApp client...');
     status = 'initializing';
     try {
-        console.log('Creating PostgresStore...');
-        const store = new PostgresStore();
-        console.log('Initializing PostgresStore...');
-        await store.init(); // Ensure the database is ready
-        console.log('PostgresStore initialized.');
+        console.log('Setting up FileStore...');
+        const store = new FileStore();
+        console.log('FileStore ready.');
 
         console.log('Creating WhatsApp client...');
         client = new Client({
