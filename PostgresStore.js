@@ -8,7 +8,11 @@ class PostgresStore {
                 rejectUnauthorized: false
             }
         });
-        this.pool.query(`
+        this.init();
+    }
+
+    async init() {
+        await this.pool.query(`
             CREATE TABLE IF NOT EXISTS wweb_sessions (
                 session_key VARCHAR(255) PRIMARY KEY,
                 session_data TEXT

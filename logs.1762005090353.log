@@ -1,0 +1,243 @@
+2025-11-01T13:50:13.000000000Z [inf]  Starting Container
+2025-11-01T13:50:14.484847720Z [inf]  Server is running on port 8080
+2025-11-01T13:50:14.484854883Z [err]  /app/node_modules/pg-pool/index.js:45
+2025-11-01T13:50:14.484862567Z [err]      Error.captureStackTrace(err)
+2025-11-01T13:50:14.484868332Z [err]            ^
+2025-11-01T13:50:14.484874747Z [err]  
+2025-11-01T13:50:14.484882002Z [err]  error: relation "wweb_sessions" does not exist
+2025-11-01T13:50:14.484888436Z [err]      at /app/node_modules/pg-pool/index.js:45:11
+2025-11-01T13:50:14.484900292Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-01T13:50:14.484905890Z [err]      at async PostgresStore.sessionExists (/app/PostgresStore.js:40:24)
+2025-11-01T13:50:14.484912111Z [err]      at async RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:31)
+2025-11-01T13:50:14.484918643Z [err]      at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+2025-11-01T13:50:14.484925370Z [err]      at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9) {
+2025-11-01T13:50:14.484932760Z [err]    length: 112,
+2025-11-01T13:50:14.484939452Z [err]    severity: 'ERROR',
+2025-11-01T13:50:14.484946364Z [err]    code: '42P01',
+2025-11-01T13:50:14.484953849Z [err]    detail: undefined,
+2025-11-01T13:50:14.484960192Z [err]    hint: undefined,
+2025-11-01T13:50:14.484967367Z [err]    position: '15',
+2025-11-01T13:50:14.484973656Z [err]    internalPosition: undefined,
+2025-11-01T13:50:14.484980406Z [err]    internalQuery: undefined,
+2025-11-01T13:50:14.484986394Z [err]    where: undefined,
+2025-11-01T13:50:14.484993285Z [err]    schema: undefined,
+2025-11-01T13:50:14.484999809Z [err]    table: undefined,
+2025-11-01T13:50:14.485005572Z [err]    column: undefined,
+2025-11-01T13:50:14.485013083Z [err]    dataType: undefined,
+2025-11-01T13:50:14.486686430Z [err]    constraint: undefined,
+2025-11-01T13:50:14.486697258Z [err]    file: 'parse_relation.c',
+2025-11-01T13:50:14.486705090Z [err]    line: '1449',
+2025-11-01T13:50:14.486712203Z [err]    routine: 'parserOpenTable'
+2025-11-01T13:50:14.486719262Z [err]  }
+2025-11-01T13:50:14.486726816Z [err]  
+2025-11-01T13:50:14.486733449Z [err]  Node.js v18.20.8
+2025-11-01T13:50:15.738237400Z [inf]  Server is running on port 8080
+2025-11-01T13:50:15.817753808Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:15.817760934Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:15.817764222Z [err]  
+2025-11-01T13:50:15.817770599Z [err]  Node.js v18.20.8
+2025-11-01T13:50:15.817772602Z [err]              reject(new Error([
+2025-11-01T13:50:15.817780506Z [err]                     ^
+2025-11-01T13:50:15.817786363Z [err]  
+2025-11-01T13:50:15.817791807Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:15.817797322Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:15.817803112Z [err]  
+2025-11-01T13:50:15.817809144Z [err]  
+2025-11-01T13:50:15.817814045Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:15.817819993Z [err]  
+2025-11-01T13:50:15.817825248Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:15.817829994Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:15.817836834Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:15.817848087Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:15.817853174Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:15.817859477Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:15.817867123Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:17.479518298Z [inf]  Server is running on port 8080
+2025-11-01T13:50:17.480133713Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:17.480160905Z [err]              reject(new Error([
+2025-11-01T13:50:17.480167895Z [err]                     ^
+2025-11-01T13:50:17.480172146Z [err]  
+2025-11-01T13:50:17.480176223Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:17.480179809Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:17.480184013Z [err]  
+2025-11-01T13:50:17.480188290Z [err]  
+2025-11-01T13:50:17.480193324Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:17.480203489Z [err]  
+2025-11-01T13:50:17.480207975Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:17.480212370Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:17.480216386Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:17.480221392Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:17.480227955Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:17.480233284Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:17.480239910Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:17.480246017Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:17.480251498Z [err]  
+2025-11-01T13:50:17.480257051Z [err]  Node.js v18.20.8
+2025-11-01T13:50:18.982828835Z [inf]  Server is running on port 8080
+2025-11-01T13:50:19.053886198Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:19.053899542Z [err]              reject(new Error([
+2025-11-01T13:50:19.053910125Z [err]                     ^
+2025-11-01T13:50:19.053917078Z [err]  
+2025-11-01T13:50:19.053925819Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:19.053934387Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:19.053941959Z [err]  
+2025-11-01T13:50:19.053950157Z [err]  
+2025-11-01T13:50:19.053962352Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:19.053977153Z [err]  
+2025-11-01T13:50:19.053984509Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:19.053991745Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:19.053999036Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:19.054007347Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:19.054015757Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:19.054023617Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:19.054030897Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:19.054039323Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:19.054047890Z [err]  
+2025-11-01T13:50:19.054057148Z [err]  Node.js v18.20.8
+2025-11-01T13:50:20.459722116Z [inf]  Server is running on port 8080
+2025-11-01T13:50:20.616734949Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:20.616743195Z [err]              reject(new Error([
+2025-11-01T13:50:20.616748085Z [err]                     ^
+2025-11-01T13:50:20.616755541Z [err]  
+2025-11-01T13:50:20.616759823Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:20.616764055Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:20.616768167Z [err]  
+2025-11-01T13:50:20.616772992Z [err]  
+2025-11-01T13:50:20.616777756Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:20.616782393Z [err]  
+2025-11-01T13:50:20.616787932Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:20.616792198Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:20.616796361Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:20.616800634Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:20.616804626Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:20.616808752Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:20.616812570Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:20.616817013Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:20.616821162Z [err]  
+2025-11-01T13:50:20.616825859Z [err]  Node.js v18.20.8
+2025-11-01T13:50:21.855499651Z [inf]  Server is running on port 8080
+2025-11-01T13:50:21.927465846Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:21.927476110Z [err]              reject(new Error([
+2025-11-01T13:50:21.927484342Z [err]                     ^
+2025-11-01T13:50:21.927492539Z [err]  
+2025-11-01T13:50:21.927500758Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:21.927507554Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:21.927514065Z [err]  
+2025-11-01T13:50:21.927520418Z [err]  
+2025-11-01T13:50:21.927527280Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:21.927534698Z [err]  
+2025-11-01T13:50:21.927541361Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:21.927551453Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:21.927559056Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:21.927564797Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:21.927570447Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:21.927576279Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:21.927582225Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:21.927588291Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:21.927594081Z [err]  
+2025-11-01T13:50:21.927599810Z [err]  Node.js v18.20.8
+2025-11-01T13:50:23.433180964Z [inf]  Server is running on port 8080
+2025-11-01T13:50:23.535528532Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:23.535540010Z [err]              reject(new Error([
+2025-11-01T13:50:23.535546201Z [err]                     ^
+2025-11-01T13:50:23.535554182Z [err]  
+2025-11-01T13:50:23.535560459Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:23.535566662Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:23.535572477Z [err]  
+2025-11-01T13:50:23.535579897Z [err]  
+2025-11-01T13:50:23.535586326Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:23.535592715Z [err]  
+2025-11-01T13:50:23.535598345Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:23.535607093Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:23.535618487Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:23.535624743Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:23.535632023Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:23.535638331Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:23.535643730Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:23.535650630Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:23.535658370Z [err]  
+2025-11-01T13:50:23.535664505Z [err]  Node.js v18.20.8
+2025-11-01T13:50:24.799932199Z [inf]  Server is running on port 8080
+2025-11-01T13:50:24.864772984Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:24.864782285Z [err]              reject(new Error([
+2025-11-01T13:50:24.864788560Z [err]                     ^
+2025-11-01T13:50:24.864793549Z [err]  
+2025-11-01T13:50:24.864799031Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:24.864804455Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:24.864810815Z [err]  
+2025-11-01T13:50:24.864815421Z [err]  
+2025-11-01T13:50:24.864821070Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:24.864826303Z [err]  
+2025-11-01T13:50:24.864832959Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:24.864838343Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:24.864844405Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:24.864852678Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:24.864858034Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:24.864863215Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:24.864870168Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:24.864874766Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:24.864880126Z [err]  
+2025-11-01T13:50:24.864884961Z [err]  Node.js v18.20.8
+2025-11-01T13:50:26.419685895Z [inf]  Server is running on port 8080
+2025-11-01T13:50:26.430765830Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:26.430774599Z [err]              reject(new Error([
+2025-11-01T13:50:26.430840375Z [err]                     ^
+2025-11-01T13:50:26.430847643Z [err]  
+2025-11-01T13:50:26.430852335Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:26.430857400Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:26.430862323Z [err]  
+2025-11-01T13:50:26.430873443Z [err]  
+2025-11-01T13:50:26.430878386Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:26.430898518Z [err]  
+2025-11-01T13:50:26.430903336Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:26.430907775Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:26.430915787Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:26.430920085Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:26.430925020Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:26.430930756Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:26.430937731Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:26.430941475Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:26.430945524Z [err]  
+2025-11-01T13:50:26.430950133Z [err]  Node.js v18.20.8
+2025-11-01T13:50:27.808762016Z [inf]  Server is running on port 8080
+2025-11-01T13:50:27.880124257Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:27.880135541Z [err]              reject(new Error([
+2025-11-01T13:50:27.880142097Z [err]                     ^
+2025-11-01T13:50:27.880151148Z [err]  
+2025-11-01T13:50:27.880157589Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:27.880163927Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:27.880169408Z [err]  
+2025-11-01T13:50:27.880174568Z [err]  
+2025-11-01T13:50:27.880180067Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:27.880186818Z [err]  
+2025-11-01T13:50:27.880195159Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:27.880201492Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:27.880207926Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:27.880214205Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:27.880220363Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:27.880227116Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:27.880233529Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:27.880239349Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:27.880246427Z [err]  
+2025-11-01T13:50:27.880251541Z [err]  Node.js v18.20.8
+2025-11-01T13:50:29.105355826Z [inf]  Server is running on port 8080
+2025-11-01T13:50:29.525912771Z [err]  /app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299
+2025-11-01T13:50:29.525917759Z [err]              reject(new Error([
+2025-11-01T13:50:29.525922002Z [err]                     ^
+2025-11-01T13:50:29.525927262Z [err]  
+2025-11-01T13:50:29.525931576Z [err]  Error: Failed to launch the browser process!
+2025-11-01T13:50:29.525936416Z [err]  /app/node_modules/puppeteer-core/.local-chromium/linux-1045629/chrome-linux/chrome: error while loading shared libraries: libgobject-2.0.so.0: cannot open shared object file: No such file or directory
+2025-11-01T13:50:29.525940634Z [err]  
+2025-11-01T13:50:29.525945827Z [err]  
+2025-11-01T13:50:29.525950486Z [err]  TROUBLESHOOTING: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
+2025-11-01T13:50:29.525954626Z [err]  
+2025-11-01T13:50:29.525959620Z [err]      at onClose (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:299:20)
+2025-11-01T13:50:29.525963750Z [err]      at Interface.<anonymous> (/app/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserRunner.js:287:24)
+2025-11-01T13:50:29.525967747Z [err]      at Interface.emit (node:events:529:35)
+2025-11-01T13:50:29.525972282Z [err]      at Interface.close (node:internal/readline/interface:534:10)
+2025-11-01T13:50:29.525977364Z [err]      at Socket.onend (node:internal/readline/interface:260:10)
+2025-11-01T13:50:29.525981587Z [err]      at Socket.emit (node:events:529:35)
+2025-11-01T13:50:29.525985915Z [err]      at endReadableNT (node:internal/streams/readable:1400:12)
+2025-11-01T13:50:29.525990308Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+2025-11-01T13:50:29.525994734Z [err]  
+2025-11-01T13:50:29.525999146Z [err]  Node.js v18.20.8
