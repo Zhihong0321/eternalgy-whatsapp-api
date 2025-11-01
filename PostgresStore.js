@@ -34,6 +34,12 @@ class PostgresStore {
         const { session } = options;
         await this.pool.query('DELETE FROM wweb_sessions WHERE session_key = $1', [session]);
     }
+
+    async sessionExists(options) {
+        const { session } = options;
+        const result = await this.pool.query('SELECT 1 FROM wweb_sessions WHERE session_key = $1', [session]);
+        return result.rowCount > 0;
+    }
 }
 
 module.exports = PostgresStore;

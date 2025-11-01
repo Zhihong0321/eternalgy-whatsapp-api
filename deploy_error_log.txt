@@ -1,0 +1,97 @@
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Node.js v18.20.8
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+                                               ^
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+TypeError: this.store.sessionExists is not a function
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+                                               ^
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+Node.js v18.20.8
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+                                               ^
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Node.js v18.20.8
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+                                               ^
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Node.js v18.20.8
+Node.js v18.20.8
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+                                               ^
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Server is running on port 8080
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+                                               ^
+Node.js v18.20.8
+TypeError: this.store.sessionExists is not a function
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+                                               ^
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Node.js v18.20.8
+Server is running on port 8080
+Node.js v18.20.8
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+                                               ^
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+                                               ^
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Node.js v18.20.8
+                                               ^
+Node.js v18.20.8
+TypeError: this.store.sessionExists is not a function
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Server is running on port 8080
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
+Node.js v18.20.8
+    at async RemoteAuth.beforeBrowserInitialized (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:62:9)
+TypeError: this.store.sessionExists is not a function
+    at async Client.initialize (/app/node_modules/whatsapp-web.js/src/Client.js:295:9)
+Server is running on port 8080
+    at RemoteAuth.extractRemoteSession (/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123:48)
+/app/node_modules/whatsapp-web.js/src/authStrategies/RemoteAuth.js:123
+        const sessionExists = await this.store.sessionExists({session: this.sessionName});
