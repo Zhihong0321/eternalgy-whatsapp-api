@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const fs = require('fs');
 
 class PostgresStore {
     constructor() {
@@ -20,33 +21,38 @@ class PostgresStore {
         await this.pool.query(`
             CREATE TABLE IF NOT EXISTS wweb_sessions (
                 session_key VARCHAR(255) PRIMARY KEY,
-                session_data TEXT
+                session_data BYTEA
             );
         `);
     }
 
     async save(options) {
-        const { session, data } = options;
-        await this.pool.query(
-            'INSERT INTO wweb_sessions (session_key, session_data) VALUES ($1, $2) ON CONFLICT (session_key) DO UPDATE SET session_data = $2',
-            [session, JSON.stringify(data)]
-        );
+        const { session } = options;
+        const sessionFilePath = `${session}.zip`;
+        
+        try {
+            const fileBuffer = fs.readFileSync(sessionFilePath);
+            await this.pool.query(
+                'INSERT INTO wweb_sessions (session_key, session_data) VALUES ($1, $2) ON CONFLICT (session_key) DO UPDATE SET session_data = $2',
+                [session, fileBuffer]
+            );
+        } finally {
+            if (fs.existsSync(sessionFilePath)) {
+                fs.unlinkSync(sessionFilePath); // Clean up the zip file
+            }
+        }
     }
 
     async extract(options) {
-        const { session } = options;
+        const { session, path } = options;
         const result = await this.pool.query('SELECT session_data FROM wweb_sessions WHERE session_key = $1', [session]);
-        if (result.rows.length === 0) {
+
+        if (result.rows.length === 0 || !result.rows[0].session_data) {
             return null;
         }
 
-        try {
-            return JSON.parse(result.rows[0].session_data);
-        } catch (error) {
-            console.error('Failed to parse session data, deleting corrupted session:', error);
-            await this.delete(options);
-            return null;
-        }
+        fs.writeFileSync(path, result.rows[0].session_data);
+        return null;
     }
 
     async delete(options) {
