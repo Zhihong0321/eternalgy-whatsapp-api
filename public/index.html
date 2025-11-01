@@ -273,7 +273,7 @@
                 refreshBtn.innerHTML = '<div class="loading"></div>Refreshing...';
                 refreshBtn.disabled = true;
                 
-                const response = await fetch('/api/status');
+                const response = await fetch('http://localhost:3001/api/status');
                 const data = await response.json();
                 
                 updateDashboard(data);
@@ -321,7 +321,7 @@
         
         async function fetchQrCode() {
             try {
-                const response = await fetch('/api/qr');
+                const response = await fetch('http://localhost:3001/api/qr');
                 const data = await response.json();
                 console.log('QR code response from server:', data);
                 

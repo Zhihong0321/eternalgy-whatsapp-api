@@ -7,7 +7,7 @@ const winston = require('winston');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.API_KEY || 'your-secret-api-key';
 
 // Import WhatsApp client module (single client only)
