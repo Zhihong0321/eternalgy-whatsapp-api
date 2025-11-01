@@ -26,6 +26,32 @@ async function waitForExistingPath(possiblePaths, { timeout = 45000, interval = 
     return null;
 }
 
+async function waitForStableFile(filePath, { timeout = 10000, interval = 200 } = {}) {
+    const startTime = Date.now();
+    let lastSize = -1;
+
+    while (Date.now() - startTime <= timeout) {
+        try {
+            const stats = await fs.promises.stat(filePath);
+            if (stats.size > 0) {
+                if (stats.size === lastSize) {
+                    return true;
+                }
+
+                lastSize = stats.size;
+            }
+        } catch (error) {
+            if (error.code !== 'ENOENT') {
+                throw error;
+            }
+        }
+
+        await sleep(interval);
+    }
+
+    throw new Error(`File did not stabilise within ${timeout}ms: ${filePath}`);
+}
+
 class PostgresStore {
     constructor() {
         try {
@@ -82,6 +108,8 @@ class PostgresStore {
                 if (!sessionFilePath) {
                     throw new Error(`Session archive not found within timeout: ${candidatePaths.join(', ')}`);
                 }
+
+                await waitForStableFile(sessionFilePath, { timeout: 10000 });
 
                 const fileBuffer = await fs.promises.readFile(sessionFilePath);
                 await this.pool.query(
