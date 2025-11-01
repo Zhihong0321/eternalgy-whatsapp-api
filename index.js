@@ -1,5 +1,5 @@
 const { Client, RemoteAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode');
+const qrcode = require('qrcode-terminal');
 const PostgresStore = require('./PostgresStore');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -107,6 +107,7 @@ async function initialize() {
 
         client.on('qr', qr => {
             console.log('QR code received');
+            qrcode.generate(qr, { small: true });
             qrCode = qr;
             status = 'waiting_qr';
         });
