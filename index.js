@@ -2,6 +2,8 @@ const { Client, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
 const FileStore = require('./FileStore');
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -14,6 +16,29 @@ let qrCode = null;
 let status = 'initializing';
 let phoneNumber = null;
 let webhookUrl = null;
+
+const REMOTE_AUTH_CLIENT_ID = 'remote-session';
+const REMOTE_AUTH_SESSION_NAME = `RemoteAuth-${REMOTE_AUTH_CLIENT_ID}`;
+const REMOTE_AUTH_DATA_PATH = path.resolve('./.wwebjs_auth/');
+const REMOTE_AUTH_REQUIRED_DIRS = ['Default', 'IndexedDB', 'Local Storage'];
+
+async function ensureRemoteAuthSkeleton(store) {
+    try {
+        const hasSession = await store.sessionExists({ session: REMOTE_AUTH_SESSION_NAME });
+
+        if (hasSession) {
+            return;
+        }
+
+        await fs.promises.mkdir(path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME), { recursive: true });
+        await Promise.all(REMOTE_AUTH_REQUIRED_DIRS.map(dir =>
+            fs.promises.mkdir(path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME, dir), { recursive: true })
+        ));
+    } catch (error) {
+        console.error('[RemoteAuthSetup] Failed to prepare RemoteAuth session directories:', error);
+        throw error;
+    }
+}
 
 // Define all routes
 app.get('/api/status', (req, res) => {
@@ -85,7 +110,7 @@ async function checkInternetConnection() {
 
 app.get('/', async (req, res) => {
     const store = new FileStore();
-    const storedSessionExists = await store.sessionExists({ session: 'RemoteAuth-remote-session' });
+    const storedSessionExists = await store.sessionExists({ session: REMOTE_AUTH_SESSION_NAME });
     const internetConnected = await checkInternetConnection();
 
     let html = `
@@ -118,13 +143,14 @@ async function initialize() {
     try {
         console.log('Setting up FileStore...');
         const store = new FileStore();
+        await ensureRemoteAuthSkeleton(store);
         console.log('FileStore ready.');
 
         console.log('Creating WhatsApp client...');
         client = new Client({
             authStrategy: new RemoteAuth({
                 store: store,
-                clientId: 'remote-session',
+                clientId: REMOTE_AUTH_CLIENT_ID,
                 backupSyncIntervalMs: 300000
             }),
             puppeteer: {

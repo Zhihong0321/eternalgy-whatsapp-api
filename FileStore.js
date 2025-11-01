@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
+const DEFAULT_WAIT_TIMEOUT_MS = 5000;
+const DEFAULT_WAIT_INTERVAL_MS = 100;
+
 class FileStore {
     constructor(options = {}) {
         const resolvedPath = options.filePath
@@ -9,18 +12,32 @@ class FileStore {
 
         this.filePath = resolvedPath;
         this.tempFilePath = `${this.filePath}.tmp`;
+        this.waitTimeoutMs = options.waitTimeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS;
+        this.waitIntervalMs = options.waitIntervalMs ?? DEFAULT_WAIT_INTERVAL_MS;
     }
 
     async save({ session }) {
-        const sessionArchivePath = `${session}.zip`;
+        const sessionArchivePath = path.resolve(`${session}.zip`);
 
         try {
+            const archiveReady = await this._waitForFile(sessionArchivePath);
+
+            if (!archiveReady) {
+                console.warn(`[FileStore] Session archive not found for "${session}" at ${sessionArchivePath}. Skipping save.`);
+                return;
+            }
+
             const archiveBuffer = await fs.promises.readFile(sessionArchivePath);
             const store = await this._readStore();
 
             store[session] = archiveBuffer.toString('base64');
             await this._writeStore(store);
         } catch (error) {
+            if (error.code === 'ENOENT') {
+                console.warn(`[FileStore] Session archive disappeared before it could be saved for "${session}".`);
+                return;
+            }
+
             console.error(`[FileStore] Failed to save session "${session}":`, error);
             throw error;
         }
@@ -122,6 +139,29 @@ class FileStore {
             }
             throw error;
         }
+    }
+
+    async _waitForFile(filePath) {
+        const start = Date.now();
+
+        while (Date.now() - start < this.waitTimeoutMs) {
+            try {
+                await fs.promises.access(filePath);
+                return true;
+            } catch (error) {
+                if (error.code !== 'ENOENT') {
+                    throw error;
+                }
+            }
+
+            await this._delay(this.waitIntervalMs);
+        }
+
+        return false;
+    }
+
+    async _delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 
