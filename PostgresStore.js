@@ -1,20 +1,29 @@
 const { Pool } = require('pg');
 const fs = require('fs');
+const path = require('path');
 
-function waitForFile(filePath, { timeout = 30000, interval = 200 } = {}) {
-    return new Promise((resolve) => {
-        const startTime = Date.now();
-        const timer = setInterval(() => {
-            if (fs.existsSync(filePath)) {
-                clearInterval(timer);
-                resolve(true);
-            } else if (Date.now() - startTime > timeout) {
-                clearInterval(timer);
-                console.warn(`[PostgresStore] waitForFile timeout after ${timeout}ms for ${filePath}`);
-                resolve(false);
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function waitForExistingPath(possiblePaths, { timeout = 45000, interval = 200 } = {}) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime <= timeout) {
+        for (const candidate of possiblePaths) {
+            try {
+                await fs.promises.access(candidate, fs.constants.F_OK);
+                return candidate;
+            } catch (error) {
+                if (error.code !== 'ENOENT') {
+                    throw error;
+                }
             }
-        }, interval);
-    });
+        }
+
+        await sleep(interval);
+    }
+
+    console.warn(`[PostgresStore] waitForExistingPath timeout after ${timeout}ms for ${possiblePaths.join(', ')}`);
+    return null;
 }
 
 class PostgresStore {
@@ -54,10 +63,10 @@ class PostgresStore {
 
     async save(options) {
         const { session } = options;
-        const sessionFilePath = `${session}.zip`;
-
-        // Wait for a short period to allow the file to be written
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const candidatePaths = [
+            path.resolve(`${session}.zip`),
+            path.resolve('.wwebjs_auth', `${session}.zip`)
+        ];
 
         await this.init();
 
@@ -68,13 +77,13 @@ class PostgresStore {
         while (attempt < maxAttempts) {
             attempt += 1;
             try {
-                const fileReady = await waitForFile(sessionFilePath, { timeout: 30000 });
+                const sessionFilePath = await waitForExistingPath(candidatePaths, { timeout: 45000 });
 
-                if (!fileReady) {
-                    throw new Error(`Session archive not found within timeout: ${sessionFilePath}`);
+                if (!sessionFilePath) {
+                    throw new Error(`Session archive not found within timeout: ${candidatePaths.join(', ')}`);
                 }
 
-                const fileBuffer = fs.readFileSync(sessionFilePath);
+                const fileBuffer = await fs.promises.readFile(sessionFilePath);
                 await this.pool.query(
                     'INSERT INTO wweb_sessions (session_key, session_data) VALUES ($1, $2) ON CONFLICT (session_key) DO UPDATE SET session_data = $2',
                     [session, fileBuffer]
@@ -100,7 +109,7 @@ class PostgresStore {
     }
 
     async extract(options) {
-        const { session, path } = options;
+        const { session, path: targetPath } = options;
         await this.init();
         const result = await this.pool.query('SELECT session_data FROM wweb_sessions WHERE session_key = $1', [session]);
 
@@ -108,7 +117,15 @@ class PostgresStore {
             return null;
         }
 
-        fs.writeFileSync(path, result.rows[0].session_data);
+        let sessionData = result.rows[0].session_data;
+
+        if (typeof sessionData === 'string') {
+            sessionData = Buffer.from(sessionData.replace(/^\\x/, ''), 'hex');
+        }
+
+        const absolutePath = path.isAbsolute(targetPath) ? targetPath : path.resolve(targetPath);
+        await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
+        await fs.promises.writeFile(absolutePath, sessionData);
         return null;
     }
 
