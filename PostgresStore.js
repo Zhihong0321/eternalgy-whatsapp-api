@@ -2,13 +2,18 @@ const { Pool } = require('pg');
 
 class PostgresStore {
     constructor() {
-        this.pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: {
-                rejectUnauthorized: false
-            }
-        });
-        this.init();
+        try {
+            this.pool = new Pool({
+                connectionString: process.env.DATABASE_URL,
+                ssl: {
+                    rejectUnauthorized: false
+                }
+            });
+            this.init();
+        } catch (error) {
+            console.error('Failed to connect to the database:', error);
+            throw error; // re-throw the error to halt initialization
+        }
     }
 
     async init() {
