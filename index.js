@@ -1,4 +1,4 @@
-const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { Client, RemoteAuth, DisconnectReason } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
 const PostgresStore = require('./PostgresStore');
@@ -26,6 +26,49 @@ let qrCode = null;
 let status = 'initializing';
 let phoneNumber = null;
 let webhookUrl = null;
+let restarting = false;
+
+const store = new PostgresStore();
+let initializePromise = null;
+let initializing = false;
+
+async function ensureStoreReady() {
+    try {
+        await store.init();
+    } catch (error) {
+        console.error('Failed to initialise PostgresStore:', error);
+        throw error;
+    }
+}
+
+async function restartClient(trigger) {
+    if (restarting) {
+        console.log(`Restart already in progress, ignoring trigger: ${trigger}`);
+        return;
+    }
+
+    restarting = true;
+
+    try {
+        if (client) {
+            try {
+                await client.destroy();
+            } catch (destroyError) {
+                console.error('Failed to destroy existing client during restart:', destroyError);
+            }
+        }
+
+        client = null;
+        qrCode = null;
+        phoneNumber = null;
+
+        await initialize();
+    } catch (error) {
+        console.error('Failed to restart WhatsApp client:', error);
+    } finally {
+        restarting = false;
+    }
+}
 
 // Define all routes
 app.get('/api/status', (req, res) => {
@@ -96,7 +139,6 @@ async function checkInternetConnection() {
 }
 
 app.get('/', async (req, res) => {
-    const store = new PostgresStore();
     const dbConnected = await store.checkConnection();
     const internetConnected = await checkInternetConnection();
 
@@ -125,91 +167,124 @@ app.get('/', async (req, res) => {
 
 // Main async function to handle initialization
 async function initialize() {
-    console.log('Initializing WhatsApp client...');
-    status = 'initializing';
-    try {
-        console.log('Creating PostgresStore...');
-        const store = new PostgresStore();
-        console.log('Initializing PostgresStore...');
-        await store.init(); // Ensure the database is ready
-        console.log('PostgresStore initialized.');
-
-        console.log('Creating WhatsApp client...');
-        client = new Client({
-            authStrategy: new RemoteAuth({
-                store: store,
-                clientId: 'remote-session',
-                backupSyncIntervalMs: 300000
-            }),
-            puppeteer: {
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox'
-                ]
-            }
-        });
-        console.log('WhatsApp client created.');
-
-        client.on('qr', qr => {
-            console.log('QR code received');
-            qrcode.generate(qr, { small: true });
-            qrCode = qr;
-            status = 'waiting_qr';
-        });
-
-        client.on('ready', () => {
-            qrCode = null;
-            status = 'connected';
-            phoneNumber = client.info.wid.user;
-            console.log('Client is ready!');
-        });
-
-        client.on('disconnected', async (reason) => {
-            qrCode = null;
-            status = 'disconnected';
-            phoneNumber = null;
-            console.log('Client was disconnected', reason);
-
-            if (reason === 'LOGOUT') {
-                console.log('Client logged out, re-initializing...');
-                if (client) {
-                    await client.destroy();
-                }
-                initialize();
-            }
-        });
-
-        client.on('auth_failure', (msg) => {
-            status = 'auth_failure';
-            console.error('Authentication failure', msg);
-        });
-
-        client.on('message', async (message) => {
-            if (webhookUrl) {
-                try {
-                    await fetch(webhookUrl, {
-                        method: 'POST',
-                        body: JSON.stringify(message.rawData),
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                } catch (error) {
-                    console.error('Failed to send webhook:', error);
-                }
-            }
-
-            if(message.body === '!ping') {
-                message.reply('pong');
-            }
-        });
-
-        console.log('Initializing WhatsApp client...');
-        await client.initialize();
-        console.log('WhatsApp client initialized.');
-
-    } catch (error) {
-        console.error('Initialization failed:', error);
-        status = 'failed';
+    if (initializing) {
+        return initializePromise;
     }
+
+    initializing = true;
+    status = 'initializing';
+    console.log('Initializing WhatsApp client...');
+
+    initializePromise = (async () => {
+        try {
+            console.log('Ensuring PostgresStore is ready...');
+            await ensureStoreReady();
+            console.log('PostgresStore ready.');
+
+            console.log('Creating WhatsApp client...');
+            client = new Client({
+                authStrategy: new RemoteAuth({
+                    store: store,
+                    clientId: 'remote-session',
+                    backupSyncIntervalMs: 300000
+                }),
+                puppeteer: {
+                    args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox'
+                    ]
+                }
+            });
+            console.log('WhatsApp client created.');
+
+            client.on('qr', qr => {
+                console.log('QR code received');
+                qrcode.generate(qr, { small: true });
+                qrCode = qr;
+                if (status !== 'connected') {
+                    status = 'waiting_qr';
+                }
+            });
+
+            client.on('ready', () => {
+                qrCode = null;
+                status = 'connected';
+                phoneNumber = client.info && client.info.wid ? client.info.wid.user : phoneNumber;
+                console.log('Client is ready!');
+            });
+
+            client.on('connection.update', async (update) => {
+                const { connection, lastDisconnect, qr } = update;
+
+                if (qr) {
+                    qrCode = qr;
+                    if (status !== 'connected') {
+                        status = 'waiting_qr';
+                    }
+                }
+
+                if (connection === 'open') {
+                    status = 'connected';
+                    qrCode = null;
+                    phoneNumber = client.info && client.info.wid ? client.info.wid.user : phoneNumber;
+                    console.log('WhatsApp connection opened.');
+                }
+
+                if (connection === 'close') {
+                    console.log('WhatsApp connection closed.', lastDisconnect?.error);
+                    qrCode = null;
+                    phoneNumber = null;
+                    status = 'disconnected';
+
+                    const statusCode = lastDisconnect?.error?.output?.statusCode;
+                    if (statusCode === DisconnectReason.loggedOut || lastDisconnect?.error === 'LOGOUT') {
+                        console.log('Session logged out. Restarting client to await new QR.');
+                        restartClient('logged_out');
+                    }
+                }
+            });
+
+            client.on('auth_failure', (msg) => {
+                status = 'auth_failure';
+                console.error('Authentication failure', msg);
+            });
+
+            client.on('message', async (message) => {
+                if (webhookUrl) {
+                    try {
+                        await fetch(webhookUrl, {
+                            method: 'POST',
+                            body: JSON.stringify(message.rawData),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    } catch (error) {
+                        console.error('Failed to send webhook:', error);
+                    }
+                }
+
+                if(message.body === '!ping') {
+                    message.reply('pong');
+                }
+            });
+
+            client.on('remote_session_saved', () => {
+                console.log('Remote session backup saved successfully.');
+            });
+
+            console.log('Initializing WhatsApp client connection...');
+            await client.initialize();
+            console.log('WhatsApp client initialized.');
+        } catch (error) {
+            console.error('Initialization failed:', error);
+            status = 'failed';
+            throw error;
+        } finally {
+            initializing = false;
+            initializePromise = null;
+        }
+    })();
+
+    return initializePromise;
 }
 
 // Start the server
@@ -217,5 +292,7 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
     // Initialize the WhatsApp client after the server has started
-    initialize();
+    initialize().catch(error => {
+        console.error('Failed to initialize WhatsApp client on server start:', error);
+    });
 });
