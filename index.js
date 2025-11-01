@@ -120,13 +120,18 @@ async function initialize() {
             console.log('Client is ready!');
         });
 
-        client.on('disconnected', (reason) => {
+        client.on('disconnected', async (reason) => {
             qrCode = null;
             status = 'disconnected';
             phoneNumber = null;
             console.log('Client was disconnected', reason);
-            // Optional: try to re-initialize
-            // initialize();
+
+            if (reason === 'LOGOUT') {
+                if (client) {
+                    await client.destroy();
+                }
+                initialize();
+            }
         });
 
         client.on('auth_failure', (msg) => {
