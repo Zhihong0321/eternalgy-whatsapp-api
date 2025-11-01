@@ -13,7 +13,13 @@ const client = new Client({
     authStrategy: new RemoteAuth({
         store: store,
         backupSyncIntervalMs: 300000
-    })
+    }),
+    puppeteer: {
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox'
+        ]
+    }
 });
 
 let qrCode = null;
