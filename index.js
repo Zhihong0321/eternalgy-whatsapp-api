@@ -1,18 +1,10 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
 const express = require('express');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
 
 const log = (message) => console.log(`[PID: ${process.pid}] ${message}`);
-
-const SESSION_DIR = path.join(process.cwd(), '.wwebjs_auth');
-if (fs.existsSync(SESSION_DIR)) {
-    log('Found old session directory, removing it to ensure a clean start.');
-    fs.rmSync(SESSION_DIR, { recursive: true, force: true });
-}
 
 const app = express();
 app.use(bodyParser.json());
@@ -128,11 +120,8 @@ async function initialize() {
     log('Initializing WhatsApp client...');
     status = 'initializing';
     try {
-        log('Creating WhatsApp client...');
+        log('Creating WhatsApp client (in-memory session)...');
         client = new Client({
-            authStrategy: new LocalAuth({
-                clientId: 'remote-session'
-            }),
             puppeteer: {
                 args: [
                     '--no-sandbox',
@@ -163,11 +152,11 @@ async function initialize() {
             log(`Client was disconnected: ${reason}`);
 
             if (reason === 'LOGOUT') {
-                log('Client logged out, re-initializing...');
+                log('CRITICAL: Client was logged out. This is an unrecoverable error. Shutting down.');
                 if (client) {
                     await client.destroy();
                 }
-                initialize();
+                process.exit(1);
             }
         });
 
@@ -210,6 +199,5 @@ async function initialize() {
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
     log(`Server is running on port ${port}`);
-    // Initialize the WhatsApp client after the server has started
     initialize();
 });
