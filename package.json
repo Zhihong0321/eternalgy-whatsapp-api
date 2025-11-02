@@ -1,0 +1,19 @@
+{
+  "name": "whatsapp-api-fresh-start",
+  "version": "1.0.0",
+  "description": "Fresh start WhatsApp API with main branch fix",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "qrcode": "^1.5.4",
+    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
