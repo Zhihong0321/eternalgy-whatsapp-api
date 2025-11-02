@@ -3,13 +3,15 @@ const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
 const express = require('express');
 const bodyParser = require('body-parser');
-const { acquireLock, releaseLock } = require('./lock-manager');
+const fs = require('fs');
+const path = require('path');
 
 const log = (message) => console.log(`[PID: ${process.pid}] ${message}`);
 
-if (!acquireLock()) {
-    log('Could not acquire lock, another instance is likely running. Exiting.');
-    process.exit(1);
+const SESSION_DIR = path.join(process.cwd(), '.wwebjs_auth');
+if (fs.existsSync(SESSION_DIR)) {
+    log('Found old session directory, removing it to ensure a clean start.');
+    fs.rmSync(SESSION_DIR, { recursive: true, force: true });
 }
 
 const app = express();
@@ -210,22 +212,4 @@ app.listen(port, () => {
     log(`Server is running on port ${port}`);
     // Initialize the WhatsApp client after the server has started
     initialize();
-});
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-    log('SIGINT received. Releasing lock and shutting down.');
-    releaseLock();
-    process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-    log('SIGTERM received. Releasing lock and shutting down.');
-    releaseLock();
-    process.exit(0);
-});
-
-process.on('exit', () => {
-    log('Process is exiting. Releasing lock.');
-    releaseLock();
 });
