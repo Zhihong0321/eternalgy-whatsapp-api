@@ -138,7 +138,22 @@ class FileStore {
             }
 
             if (error.name === 'SyntaxError') {
-                console.error(`[FileStore] Store file at ${this.filePath} is not valid JSON. Ignoring contents.`);
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const backupPath = `${this.filePath}.corrupt-${timestamp}`;
+
+                console.warn(`[FileStore] Store file at ${this.filePath} is not valid JSON. Backing it up to ${backupPath} and treating as empty.`);
+
+                try {
+                    await fs.promises.rename(this.filePath, backupPath);
+                } catch (renameError) {
+                    if (renameError.code === 'ENOENT') {
+                        // File disappeared after we attempted to read it. Treat as empty.
+                        return {};
+                    }
+
+                    console.error(`[FileStore] Failed to back up corrupt store file at ${this.filePath}:`, renameError);
+                }
+
                 return {};
             }
 
