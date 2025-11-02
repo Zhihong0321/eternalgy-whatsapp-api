@@ -4,8 +4,9 @@
   "description": "Fresh start WhatsApp API with main branch fix",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node railway-start.js",
+    "dev": "nodemon server.js",
+    "local": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

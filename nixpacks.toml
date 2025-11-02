@@ -4,5 +4,8 @@ nixPkgs = ['nodejs_18', 'chromium']
 [phases.install]
 cmds = ['npm ci']
 
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
+
 [start]
 cmd = 'npm start'

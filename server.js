@@ -23,26 +23,47 @@ let isReady = false;
 function initWhatsApp() {
   console.log('🚀 Initializing WhatsApp client...');
   
+  // Railway Chrome executable detection
+  const fs = require('fs');
+  let executablePath;
+  
+  // Check for Railway/nixpacks Chrome paths
+  const possiblePaths = [
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable'
+  ];
+  
+  for (const path of possiblePaths) {
+    if (path && fs.existsSync(path)) {
+      executablePath = path;
+      console.log(`✅ Found Chrome at: ${executablePath}`);
+      break;
+    }
+  }
+  
+  const puppeteerConfig = {
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-web-security',
+      '--disable-features=VizDisplayCompositor'
+    ]
+  };
+  
+  // Only set executablePath if we found one
+  if (executablePath) {
+    puppeteerConfig.executablePath = executablePath;
+  }
+  
   client = new Client({
     authStrategy: new LocalAuth(),
-    puppeteer: {
-      headless: true,
-      executablePath: process.env.CHROME_PATH || '/usr/bin/chromium-browser' || undefined,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--disable-background-timer-throttling',
-        '--disable-renderer-backgrounding',
-        '--disable-backgrounding-occluded-windows'
-      ]
-    }
+    puppeteer: puppeteerConfig
   });
 
   client.on('qr', (qr) => {
