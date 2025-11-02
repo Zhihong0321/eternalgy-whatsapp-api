@@ -3,6 +3,12 @@ const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
 const express = require('express');
 const bodyParser = require('body-parser');
+const { acquireLock, releaseLock } = require('./lock-manager');
+
+if (!acquireLock()) {
+    console.log('Could not acquire lock, another instance is likely running. Exiting.');
+    process.exit(1);
+}
 
 const app = express();
 app.use(bodyParser.json());
@@ -202,4 +208,22 @@ app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
     // Initialize the WhatsApp client after the server has started
     initialize();
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('SIGINT received. Releasing lock and shutting down.');
+    releaseLock();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received. Releasing lock and shutting down.');
+    releaseLock();
+    process.exit(0);
+});
+
+process.on('exit', () => {
+    console.log('Process is exiting. Releasing lock.');
+    releaseLock();
 });
