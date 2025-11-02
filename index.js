@@ -5,8 +5,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { acquireLock, releaseLock } = require('./lock-manager');
 
+const log = (message) => console.log(`[PID: ${process.pid}] ${message}`);
+
 if (!acquireLock()) {
-    console.log('Could not acquire lock, another instance is likely running. Exiting.');
+    log('Could not acquire lock, another instance is likely running. Exiting.');
     process.exit(1);
 }
 
@@ -117,14 +119,14 @@ app.get('/', async (req, res) => {
 // Main async function to handle initialization
 async function initialize() {
     if (isInitializing) {
-        console.log('Initialization already in progress...');
+        log('Initialization already in progress...');
         return;
     }
     isInitializing = true;
-    console.log('Initializing WhatsApp client...');
+    log('Initializing WhatsApp client...');
     status = 'initializing';
     try {
-        console.log('Creating WhatsApp client...');
+        log('Creating WhatsApp client...');
         client = new Client({
             authStrategy: new LocalAuth({
                 clientId: 'remote-session'
@@ -136,10 +138,10 @@ async function initialize() {
                 ]
             }
         });
-        console.log('WhatsApp client created.');
+        log('WhatsApp client created.');
 
         client.on('qr', qr => {
-            console.log('QR code received');
+            log('QR code received');
             qrcode.generate(qr, { small: true });
             qrCode = qr;
             status = 'waiting_qr';
@@ -149,17 +151,17 @@ async function initialize() {
             qrCode = null;
             status = 'connected';
             phoneNumber = client.info.wid.user;
-            console.log('Client is ready!');
+            log('Client is ready!');
         });
 
         client.on('disconnected', async (reason) => {
             qrCode = null;
             status = 'disconnected';
             phoneNumber = null;
-            console.log('Client was disconnected', reason);
+            log(`Client was disconnected: ${reason}`);
 
             if (reason === 'LOGOUT') {
-                console.log('Client logged out, re-initializing...');
+                log('Client logged out, re-initializing...');
                 if (client) {
                     await client.destroy();
                 }
@@ -169,7 +171,7 @@ async function initialize() {
 
         client.on('auth_failure', (msg) => {
             status = 'auth_failure';
-            console.error('Authentication failure', msg);
+            log(`Authentication failure: ${msg}`);
         });
 
         client.on('message', async (message) => {
@@ -181,7 +183,7 @@ async function initialize() {
                         headers: { 'Content-Type': 'application/json' }
                     });
                 } catch (error) {
-                    console.error('Failed to send webhook:', error);
+                    log(`Failed to send webhook: ${error}`);
                 }
             }
 
@@ -190,12 +192,12 @@ async function initialize() {
             }
         });
 
-        console.log('Initializing WhatsApp client...');
+        log('Attempting to initialize WhatsApp client...');
         await client.initialize();
-        console.log('WhatsApp client initialized.');
+        log('WhatsApp client initialized successfully.');
 
     } catch (error) {
-        console.error('Initialization failed:', error);
+        log(`Initialization failed: ${error}`);
         status = 'failed';
     } finally {
         isInitializing = false;
@@ -205,25 +207,25 @@ async function initialize() {
 // Start the server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    log(`Server is running on port ${port}`);
     // Initialize the WhatsApp client after the server has started
     initialize();
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-    console.log('SIGINT received. Releasing lock and shutting down.');
+    log('SIGINT received. Releasing lock and shutting down.');
     releaseLock();
     process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-    console.log('SIGTERM received. Releasing lock and shutting down.');
+    log('SIGTERM received. Releasing lock and shutting down.');
     releaseLock();
     process.exit(0);
 });
 
 process.on('exit', () => {
-    console.log('Process is exiting. Releasing lock.');
+    log('Process is exiting. Releasing lock.');
     releaseLock();
 });
