@@ -1,9 +1,22 @@
-const { Client, RemoteAuth } = require('whatsapp-web.js');
+process.on('unhandledRejection', (error) => {
+  if (error.message.includes('Protocol error') && error.message.includes('Session closed')) {
+    console.warn('Suppressed Puppeteer error:', error.message);
+    return;
+  }
+  throw error;
+});
+
+const { Client } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
-const PostgresStore = require('./PostgresStore');
 const express = require('express');
 const bodyParser = require('body-parser');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
+puppeteer.use(StealthPlugin());
+
+const log = (message) => console.log(`[PID: ${process.pid}] ${message}`);
 
 const app = express();
 app.use(bodyParser.json());
@@ -14,6 +27,7 @@ let qrCode = null;
 let status = 'initializing';
 let phoneNumber = null;
 let webhookUrl = null;
+let isInitializing = false;
 
 // Define all routes
 app.get('/api/status', (req, res) => {
@@ -84,15 +98,12 @@ async function checkInternetConnection() {
 }
 
 app.get('/', async (req, res) => {
-    const store = new PostgresStore();
-    const dbConnected = await store.checkConnection();
     const internetConnected = await checkInternetConnection();
 
     let html = `
         <h1>WhatsApp API Status</h1>
         <p><strong>WhatsApp Status:</strong> ${status}</p>
         <p><strong>Phone Number:</strong> ${phoneNumber || 'Not Connected'}</p>
-        <p><strong>Database Status:</strong> ${dbConnected ? 'Connected' : 'Disconnected'}</p>
         <p><strong>Internet Status:</strong> ${internetConnected ? 'Connected' : 'Disconnected'}</p>
     `;
 
@@ -113,33 +124,29 @@ app.get('/', async (req, res) => {
 
 // Main async function to handle initialization
 async function initialize() {
-    console.log('Initializing WhatsApp client...');
+    if (isInitializing) {
+        log('Initialization already in progress...');
+        return;
+    }
+    isInitializing = true;
+    log('Initializing WhatsApp client...');
     status = 'initializing';
     try {
-        console.log('Creating PostgresStore...');
-        const store = new PostgresStore();
-        console.log('Initializing PostgresStore...');
-        await store.init(); // Ensure the database is ready
-        console.log('PostgresStore initialized.');
-
-        console.log('Creating WhatsApp client...');
+        log('Creating WhatsApp client (in-memory session with stealth)...');
         client = new Client({
-            authStrategy: new RemoteAuth({
-                store: store,
-                clientId: 'remote-session',
-                backupSyncIntervalMs: 300000
-            }),
             puppeteer: {
+                headless: true,
+                executablePath: '/usr/bin/google-chrome-stable',
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox'
                 ]
             }
         });
-        console.log('WhatsApp client created.');
+        log('WhatsApp client created.');
 
         client.on('qr', qr => {
-            console.log('QR code received');
+            log('QR code received');
             qrcode.generate(qr, { small: true });
             qrCode = qr;
             status = 'waiting_qr';
@@ -149,27 +156,27 @@ async function initialize() {
             qrCode = null;
             status = 'connected';
             phoneNumber = client.info.wid.user;
-            console.log('Client is ready!');
+            log('Client is ready!');
         });
 
         client.on('disconnected', async (reason) => {
             qrCode = null;
             status = 'disconnected';
             phoneNumber = null;
-            console.log('Client was disconnected', reason);
+            log(`Client was disconnected: ${reason}`);
 
             if (reason === 'LOGOUT') {
-                console.log('Client logged out, re-initializing...');
+                log('CRITICAL: Client was logged out. This is an unrecoverable error. Shutting down.');
                 if (client) {
                     await client.destroy();
                 }
-                initialize();
+                process.exit(1);
             }
         });
 
         client.on('auth_failure', (msg) => {
             status = 'auth_failure';
-            console.error('Authentication failure', msg);
+            log(`Authentication failure: ${msg}`);
         });
 
         client.on('message', async (message) => {
@@ -181,7 +188,7 @@ async function initialize() {
                         headers: { 'Content-Type': 'application/json' }
                     });
                 } catch (error) {
-                    console.error('Failed to send webhook:', error);
+                    log(`Failed to send webhook: ${error}`);
                 }
             }
 
@@ -190,20 +197,22 @@ async function initialize() {
             }
         });
 
-        console.log('Initializing WhatsApp client...');
+        log('Attempting to initialize WhatsApp client...');
         await client.initialize();
-        console.log('WhatsApp client initialized.');
+        log('WhatsApp client initialized successfully.');
 
     } catch (error) {
-        console.error('Initialization failed:', error);
+        log(`Initialization failed. Error: ${error.message}`);
+        log(`Stack: ${error.stack}`);
         status = 'failed';
+    } finally {
+        isInitializing = false;
     }
 }
 
 // Start the server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-    // Initialize the WhatsApp client after the server has started
+    log(`Server is running on port ${port}`);
     initialize();
 });
