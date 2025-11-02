@@ -190,7 +190,8 @@ async function initialize() {
         log('WhatsApp client initialized successfully.');
 
     } catch (error) {
-        log(`Initialization failed: ${error}`);
+        log(`Initialization failed. Error: ${error.message}`);
+        log(`Stack: ${error.stack}`);
         status = 'failed';
     } finally {
         isInitializing = false;
