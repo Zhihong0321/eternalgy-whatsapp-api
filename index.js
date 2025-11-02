@@ -1,3 +1,11 @@
+process.on('unhandledRejection', (error) => {
+  if (error.message.includes('Protocol error') && error.message.includes('Session closed')) {
+    console.warn('Suppressed Puppeteer error:', error.message);
+    return;
+  }
+  throw error;
+});
+
 const { Client } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
