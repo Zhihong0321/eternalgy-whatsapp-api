@@ -1,7 +1,6 @@
-const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
-const PostgresStore = require('./PostgresStore');
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -14,6 +13,7 @@ let qrCode = null;
 let status = 'initializing';
 let phoneNumber = null;
 let webhookUrl = null;
+let isInitializing = false;
 
 // Define all routes
 app.get('/api/status', (req, res) => {
@@ -84,15 +84,12 @@ async function checkInternetConnection() {
 }
 
 app.get('/', async (req, res) => {
-    const store = new PostgresStore();
-    const dbConnected = await store.checkConnection();
     const internetConnected = await checkInternetConnection();
 
     let html = `
         <h1>WhatsApp API Status</h1>
         <p><strong>WhatsApp Status:</strong> ${status}</p>
         <p><strong>Phone Number:</strong> ${phoneNumber || 'Not Connected'}</p>
-        <p><strong>Database Status:</strong> ${dbConnected ? 'Connected' : 'Disconnected'}</p>
         <p><strong>Internet Status:</strong> ${internetConnected ? 'Connected' : 'Disconnected'}</p>
     `;
 
@@ -113,21 +110,18 @@ app.get('/', async (req, res) => {
 
 // Main async function to handle initialization
 async function initialize() {
+    if (isInitializing) {
+        console.log('Initialization already in progress...');
+        return;
+    }
+    isInitializing = true;
     console.log('Initializing WhatsApp client...');
     status = 'initializing';
     try {
-        console.log('Creating PostgresStore...');
-        const store = new PostgresStore();
-        console.log('Initializing PostgresStore...');
-        await store.init(); // Ensure the database is ready
-        console.log('PostgresStore initialized.');
-
         console.log('Creating WhatsApp client...');
         client = new Client({
-            authStrategy: new RemoteAuth({
-                store: store,
-                clientId: 'remote-session',
-                backupSyncIntervalMs: 300000
+            authStrategy: new LocalAuth({
+                clientId: 'remote-session'
             }),
             puppeteer: {
                 args: [
@@ -197,6 +191,8 @@ async function initialize() {
     } catch (error) {
         console.error('Initialization failed:', error);
         status = 'failed';
+    } finally {
+        isInitializing = false;
     }
 }
 
