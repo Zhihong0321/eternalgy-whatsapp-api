@@ -24,7 +24,25 @@ function initWhatsApp() {
   console.log('🚀 Initializing WhatsApp client...');
   
   client = new Client({
-    authStrategy: new LocalAuth()
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+      headless: true,
+      executablePath: process.env.CHROME_PATH || '/usr/bin/chromium-browser' || undefined,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-backgrounding-occluded-windows'
+      ]
+    }
   });
 
   client.on('qr', (qr) => {
