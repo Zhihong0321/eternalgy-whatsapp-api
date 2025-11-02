@@ -118,9 +118,27 @@ app.post('/api/send', async (req, res) => {
   }
   
   try {
-    const result = await client.sendMessage(to, message);
-    res.json({ success: true, id: result.id._serialized });
+    // Format phone number for WhatsApp
+    let formattedNumber = to.replace(/\D/g, ''); // Remove non-digits
+    
+    // Validate number length (should be 10-15 digits with country code)
+    if (formattedNumber.length < 10 || formattedNumber.length > 15) {
+      throw new Error('Invalid phone number length. Include country code (10-15 digits total)');
+    }
+    
+    // WhatsApp format: number@c.us
+    const chatId = formattedNumber + '@c.us';
+    
+    console.log(`📤 Sending message to ${chatId}: ${message}`);
+    
+    const result = await client.sendMessage(chatId, message);
+    res.json({ 
+      success: true, 
+      id: result.id._serialized,
+      to: chatId 
+    });
   } catch (error) {
+    console.error('❌ Send message error:', error);
     res.status(500).json({ error: error.message });
   }
 });
