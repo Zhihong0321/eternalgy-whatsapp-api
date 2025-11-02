@@ -66,7 +66,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 WhatsApp API - Ground Zero Test</h1>
+        <h1>🚀 WhatsApp API Dashboard</h1>
+        <p><strong>API Base URL:</strong> <code id="baseUrl"></code></p>
         
         <div id="status" class="status waiting">
             📡 Checking connection...
@@ -82,11 +83,24 @@
             <h3>🧪 Test Message</h3>
             <p><strong>Phone Format:</strong> Enter with country code (e.g., 1234567890 for US, 447123456789 for UK)</p>
             <input type="text" id="phone" placeholder="Phone with country code" />
-            <input type="text" id="message" placeholder="Test message" value="Hello from Ground Zero!" />
+            <input type="text" id="message" placeholder="Test message" value="Hello from WhatsApp API!" />
             <button onclick="sendMessage()">Send Test Message</button>
         </div>
         
+        <div class="test-section">
+            <h3>🔗 Quick Integration</h3>
+            <p>Use this API in your applications:</p>
+            <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px;">POST <span id="sendUrl"></span>
+Content-Type: application/json
+
+{
+  "to": "1234567890",
+  "message": "Hello World!"
+}</pre>
+        </div>
+        
         <button onclick="refreshStatus()">🔄 Refresh Status</button>
+        <button onclick="window.open('/api/docs', '_blank')">📚 API Documentation</button>
         
         <div id="log" style="margin-top: 20px; font-family: monospace; font-size: 12px;"></div>
     </div>
@@ -175,6 +189,11 @@
 
         // Auto-refresh every 3 seconds
         setInterval(refreshStatus, 3000);
+        
+        // Set base URL
+        const baseUrl = window.location.origin;
+        document.getElementById('baseUrl').textContent = baseUrl;
+        document.getElementById('sendUrl').textContent = baseUrl + '/api/send';
         
         // Initial load
         refreshStatus();

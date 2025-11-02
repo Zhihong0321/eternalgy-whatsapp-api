@@ -14,6 +14,11 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// API Documentation route
+app.get('/api/docs', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'docs.html'));
+});
+
 // DEAD SIMPLE - Single WhatsApp client
 let client = null;
 let qrString = null;
@@ -90,6 +95,21 @@ function initWhatsApp() {
 }
 
 // API Routes
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'WhatsApp API',
+    version: '1.0.0',
+    description: 'Send WhatsApp messages via API',
+    endpoints: {
+      'GET /api/status': 'Check WhatsApp connection status',
+      'GET /api/qr': 'Get QR code for authentication',
+      'POST /api/send': 'Send WhatsApp message',
+      'GET /api/docs': 'View API documentation'
+    },
+    documentation: '/api/docs'
+  });
+});
+
 app.get('/api/status', (req, res) => {
   res.json({
     ready: isReady,

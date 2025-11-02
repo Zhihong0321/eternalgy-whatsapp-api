@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp API Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #25D366; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
+        h2 { color: #128C7E; margin-top: 40px; }
+        h3 { color: #34495e; }
+        .endpoint {
+            background: #f8f9fa;
+            border-left: 4px solid #25D366;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .get { background: #28a745; color: white; }
+        .post { background: #007bff; color: white; }
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .example {
+            background: #e8f5e8;
+            border: 1px solid #25D366;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover { background: #5a6268; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← Back to Dashboard</a>
+        
+        <h1>📚 WhatsApp API Documentation</h1>
+        
+        <p>This API allows you to send WhatsApp messages programmatically using WhatsApp Web.js. The API is RESTful and returns JSON responses.</p>
+        
+        <div class="warning">
+            <strong>⚠️ Important:</strong> This API requires WhatsApp Web authentication via QR code scan. Ensure the service is authenticated before sending messages.
+        </div>
+
+        <h2>Base URL</h2>
+        <pre>https://your-railway-app.railway.app</pre>
+
+        <h2>Authentication</h2>
+        <p>No API key required. Authentication is handled through WhatsApp Web QR code scanning.</p>
+
+        <h2>Endpoints</h2>
+
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> /api/status</h3>
+            <p>Check the current status of the WhatsApp client.</p>
+            
+            <h4>Response</h4>
+            <pre>{
+  "ready": true,
+  "hasQR": false
+}</pre>
+            
+            <table>
+                <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+                <tr><td>ready</td><td>boolean</td><td>Whether WhatsApp is authenticated and ready</td></tr>
+                <tr><td>hasQR</td><td>boolean</td><td>Whether a QR code is available for scanning</td></tr>
+            </table>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> /api/qr</h3>
+            <p>Get the current QR code for WhatsApp Web authentication (if available).</p>
+            
+            <h4>Response</h4>
+            <pre>{
+  "qr": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+}</pre>
+            
+            <table>
+                <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+                <tr><td>qr</td><td>string|null</td><td>Base64 encoded QR code image or null if not available</td></tr>
+            </table>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> /api/send</h3>
+            <p>Send a WhatsApp message to a phone number.</p>
+            
+            <h4>Request Body</h4>
+            <pre>{
+  "to": "1234567890",
+  "message": "Hello from API!"
+}</pre>
+            
+            <table>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+                <tr><td>to</td><td>string</td><td>Yes</td><td>Phone number with country code (digits only)</td></tr>
+                <tr><td>message</td><td>string</td><td>Yes</td><td>Message text to send</td></tr>
+            </table>
+
+            <h4>Success Response</h4>
+            <pre>{
+  "success": true,
+  "id": "3EB0C767D71D42D5E1C5_out",
+  "to": "1234567890@c.us"
+}</pre>
+
+            <h4>Error Response</h4>
+            <pre>{
+  "error": "WhatsApp not ready"
+}</pre>
+        </div>
+
+        <h2>Phone Number Format</h2>
+        <p>Phone numbers must include the country code and contain only digits:</p>
+        
+        <div class="example">
+            <strong>✅ Correct formats:</strong><br>
+            • US/Canada: <code>1234567890</code><br>
+            • UK: <code>447123456789</code><br>
+            • India: <code>919876543210</code><br>
+            • Brazil: <code>5511987654321</code>
+        </div>
+
+        <div class="warning">
+            <strong>❌ Incorrect formats:</strong><br>
+            • <code>+1 (234) 567-8900</code> (contains symbols)<br>
+            • <code>234567890</code> (missing country code)<br>
+            • <code>1-234-567-8900</code> (contains dashes)
+        </div>
+
+        <h2>Code Examples</h2>
+
+        <h3>JavaScript (Fetch)</h3>
+        <pre>// Check status
+const status = await fetch('/api/status').then(r => r.json());
+console.log('WhatsApp ready:', status.ready);
+
+// Send message
+const response = await fetch('/api/send', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    to: '1234567890',
+    message: 'Hello from API!'
+  })
+});
+
+const result = await response.json();
+if (result.success) {
+  console.log('Message sent:', result.id);
+} else {
+  console.error('Error:', result.error);
+}</pre>
+
+        <h3>Python (requests)</h3>
+        <pre>import requests
+
+# Check status
+status = requests.get('https://your-app.railway.app/api/status').json()
+print(f"WhatsApp ready: {status['ready']}")
+
+# Send message
+response = requests.post('https://your-app.railway.app/api/send', json={
+    'to': '1234567890',
+    'message': 'Hello from Python!'
+})
+
+result = response.json()
+if result.get('success'):
+    print(f"Message sent: {result['id']}")
+else:
+    print(f"Error: {result['error']}")</pre>
+
+        <h3>cURL</h3>
+        <pre># Check status
+curl https://your-app.railway.app/api/status
+
+# Send message
+curl -X POST https://your-app.railway.app/api/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "1234567890",
+    "message": "Hello from cURL!"
+  }'</pre>
+
+        <h2>Error Codes</h2>
+        <table>
+            <tr><th>HTTP Status</th><th>Error</th><th>Description</th></tr>
+            <tr><td>400</td><td>WhatsApp not ready</td><td>Client not authenticated or disconnected</td></tr>
+            <tr><td>400</td><td>Invalid phone number length</td><td>Phone number must be 10-15 digits</td></tr>
+            <tr><td>500</td><td>Send message failed</td><td>WhatsApp API error or network issue</td></tr>
+        </table>
+
+        <h2>Rate Limits</h2>
+        <p>To avoid being blocked by WhatsApp:</p>
+        <ul>
+            <li>Don't send more than 1 message per second</li>
+            <li>Avoid sending identical messages repeatedly</li>
+            <li>Don't send messages to numbers that haven't opted in</li>
+            <li>Respect WhatsApp's terms of service</li>
+        </ul>
+
+        <h2>Webhook Integration</h2>
+        <p>For production use, consider implementing webhooks to handle:</p>
+        <ul>
+            <li>Message delivery confirmations</li>
+            <li>Incoming message handling</li>
+            <li>Connection status changes</li>
+            <li>QR code refresh notifications</li>
+        </ul>
+
+        <div class="warning">
+            <strong>🔒 Security Note:</strong> This API should be deployed behind authentication in production. Consider implementing API keys, rate limiting, and IP whitelisting.
+        </div>
+    </div>
+</body>
+</html>
