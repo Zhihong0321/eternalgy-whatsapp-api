@@ -44,6 +44,8 @@ RUN apt-get update && apt-get install -y \
     wget \
     xdg-utils \
     --no-install-recommends \
+    && wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package.json and package-lock.json to the working directory

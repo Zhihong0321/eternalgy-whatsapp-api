@@ -124,7 +124,7 @@ async function initialize() {
         client = new Client({
             puppeteer: {
                 headless: true,
-                browserWSEndpoint: 'wss://browserless.pedroslopez.me',
+                executablePath: '/usr/bin/google-chrome-stable',
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox'
