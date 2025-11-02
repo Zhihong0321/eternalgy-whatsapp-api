@@ -123,13 +123,11 @@ async function initialize() {
         log('Creating WhatsApp client (in-memory session)...');
         client = new Client({
             puppeteer: {
-                headless: false,
-                dumpio: true,
+                headless: true,
+                browserWSEndpoint: 'wss://browserless.pedroslopez.me',
                 args: [
                     '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-gpu',
-                    '--disable-dev-shm-usage'
+                    '--disable-setuid-sandbox'
                 ]
             }
         });
