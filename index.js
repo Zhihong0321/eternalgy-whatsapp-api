@@ -3,6 +3,10 @@ const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
 const express = require('express');
 const bodyParser = require('body-parser');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
+puppeteer.use(StealthPlugin());
 
 const log = (message) => console.log(`[PID: ${process.pid}] ${message}`);
 
@@ -120,7 +124,7 @@ async function initialize() {
     log('Initializing WhatsApp client...');
     status = 'initializing';
     try {
-        log('Creating WhatsApp client (in-memory session)...');
+        log('Creating WhatsApp client (in-memory session with stealth)...');
         client = new Client({
             puppeteer: {
                 headless: true,
