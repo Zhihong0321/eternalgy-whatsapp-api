@@ -1,7 +1,9 @@
-const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { Client, RemoteAuth, Events } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrcodeDataURL = require('qrcode');
-const PostgresStore = require('./PostgresStore');
+const FileStore = require('./FileStore');
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -14,6 +16,37 @@ let qrCode = null;
 let status = 'initializing';
 let phoneNumber = null;
 let webhookUrl = null;
+
+const REMOTE_AUTH_CLIENT_ID = 'remote-session';
+const REMOTE_AUTH_SESSION_NAME = `RemoteAuth-${REMOTE_AUTH_CLIENT_ID}`;
+const REMOTE_AUTH_DATA_PATH = path.resolve('./.wwebjs_auth/');
+const REMOTE_AUTH_REQUIRED_DIRS = ['Default', 'IndexedDB', 'Local Storage'];
+const FILE_STORE_OPTIONS = {
+    archiveDirectories: [
+        REMOTE_AUTH_DATA_PATH,
+        path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME)
+    ]
+};
+const sharedStore = new FileStore(FILE_STORE_OPTIONS);
+
+async function ensureRemoteAuthSkeleton(store) {
+    try {
+        const hasSession = await store.sessionExists({ session: REMOTE_AUTH_SESSION_NAME });
+
+        if (hasSession) {
+            return;
+        }
+
+        await fs.promises.mkdir(REMOTE_AUTH_DATA_PATH, { recursive: true });
+        await fs.promises.mkdir(path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME), { recursive: true });
+        await Promise.all(REMOTE_AUTH_REQUIRED_DIRS.map(dir =>
+            fs.promises.mkdir(path.join(REMOTE_AUTH_DATA_PATH, REMOTE_AUTH_SESSION_NAME, dir), { recursive: true })
+        ));
+    } catch (error) {
+        console.error('[RemoteAuthSetup] Failed to prepare RemoteAuth session directories:', error);
+        throw error;
+    }
+}
 
 // Define all routes
 app.get('/api/status', (req, res) => {
@@ -84,15 +117,14 @@ async function checkInternetConnection() {
 }
 
 app.get('/', async (req, res) => {
-    const store = new PostgresStore();
-    const dbConnected = await store.checkConnection();
+    const storedSessionExists = await sharedStore.sessionExists({ session: REMOTE_AUTH_SESSION_NAME });
     const internetConnected = await checkInternetConnection();
 
     let html = `
         <h1>WhatsApp API Status</h1>
         <p><strong>WhatsApp Status:</strong> ${status}</p>
         <p><strong>Phone Number:</strong> ${phoneNumber || 'Not Connected'}</p>
-        <p><strong>Database Status:</strong> ${dbConnected ? 'Connected' : 'Disconnected'}</p>
+        <p><strong>Stored Session Available:</strong> ${storedSessionExists ? 'Yes' : 'No'}</p>
         <p><strong>Internet Status:</strong> ${internetConnected ? 'Connected' : 'Disconnected'}</p>
     `;
 
@@ -116,17 +148,16 @@ async function initialize() {
     console.log('Initializing WhatsApp client...');
     status = 'initializing';
     try {
-        console.log('Creating PostgresStore...');
-        const store = new PostgresStore();
-        console.log('Initializing PostgresStore...');
-        await store.init(); // Ensure the database is ready
-        console.log('PostgresStore initialized.');
+        console.log('Setting up FileStore...');
+        const store = sharedStore;
+        await ensureRemoteAuthSkeleton(store);
+        console.log('FileStore ready.');
 
         console.log('Creating WhatsApp client...');
         client = new Client({
             authStrategy: new RemoteAuth({
                 store: store,
-                clientId: 'remote-session',
+                clientId: REMOTE_AUTH_CLIENT_ID,
                 backupSyncIntervalMs: 300000
             }),
             puppeteer: {
@@ -150,6 +181,7 @@ async function initialize() {
             status = 'connected';
             phoneNumber = client.info.wid.user;
             console.log('Client is ready!');
+            forceImmediateRemoteBackup().catch(() => {});
         });
 
         client.on('disconnected', async (reason) => {
@@ -170,6 +202,10 @@ async function initialize() {
         client.on('auth_failure', (msg) => {
             status = 'auth_failure';
             console.error('Authentication failure', msg);
+        });
+
+        client.on(Events.REMOTE_SESSION_SAVED, () => {
+            console.log('[RemoteAuth] Session backup saved to FileStore.');
         });
 
         client.on('message', async (message) => {
@@ -197,6 +233,20 @@ async function initialize() {
     } catch (error) {
         console.error('Initialization failed:', error);
         status = 'failed';
+    }
+}
+
+async function forceImmediateRemoteBackup() {
+    if (!client || !client.authStrategy || typeof client.authStrategy.storeRemoteSession !== 'function') {
+        return;
+    }
+
+    try {
+        console.log('[RemoteAuth] Triggering immediate session backup...');
+        await client.authStrategy.storeRemoteSession({ emit: true });
+        console.log('[RemoteAuth] Immediate session backup complete.');
+    } catch (error) {
+        console.error('[RemoteAuth] Immediate session backup failed:', error);
     }
 }
 
