@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
-const { store } = require('./database');
+const store = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
