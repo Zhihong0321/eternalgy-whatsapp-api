@@ -11,24 +11,36 @@ const pool = new Pool({
 });
 
 class PostgresStore {
+    constructor() {
+        this.initialized = this.init();
+    }
+
     async init() {
         await pool.query(`CREATE TABLE IF NOT EXISTS "${tableName}" (id TEXT PRIMARY KEY, data TEXT)`);
     }
+
     async sessionExists(opt) {
+        await this.initialized;
         const res = await pool.query(`SELECT 1 FROM "${tableName}" WHERE id = $1`, [opt.session]);
         return res.rowCount > 0;
     }
+
     async save(opt) {
+        await this.initialized;
         await pool.query(
             `INSERT INTO "${tableName}" (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2`,
             [opt.session, JSON.stringify(opt.data)]
         );
     }
+
     async extract(opt) {
+        await this.initialized;
         const res = await pool.query(`SELECT data FROM "${tableName}" WHERE id = $1`, [opt.session]);
         return res.rowCount ? JSON.parse(res.rows[0].data) : null;
     }
+
     async delete(opt) {
+        await this.initialized;
         await pool.query(`DELETE FROM "${tableName}" WHERE id = $1`, [opt.session]);
     }
 }
