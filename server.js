@@ -1,7 +1,8 @@
 const express = require('express');
 const path = require('path');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
+const { store } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -66,8 +67,24 @@ function initWhatsApp() {
     puppeteerConfig.executablePath = executablePath;
   }
   
+  // Determine Auth Strategy
+  let authStrategy;
+  if (store) {
+    console.log('🔌 Using RemoteAuth with Postgres');
+    authStrategy = new RemoteAuth({
+      store: store,
+      clientId: process.env.SESSION_ID || 'main_session',
+      backupSyncIntervalMs: 60000
+    });
+  } else {
+    console.log('📂 Using LocalAuth (File System)');
+    authStrategy = new LocalAuth({
+        clientId: process.env.SESSION_ID || 'main_session'
+    });
+  }
+
   client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: authStrategy,
     puppeteer: puppeteerConfig
   });
 
