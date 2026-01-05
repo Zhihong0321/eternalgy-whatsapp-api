@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const { Store } = require('whatsapp-web.js');
 
 // Simple prefix: Use DB_PREFIX or RAILWAY_SERVICE_NAME, default to 'wa'
 const prefix = (process.env.DB_PREFIX || process.env.RAILWAY_SERVICE_NAME || 'wa')
@@ -11,7 +10,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-class PostgresStore extends Store {
+class PostgresStore {
     async init() {
         await pool.query(`CREATE TABLE IF NOT EXISTS "${tableName}" (id TEXT PRIMARY KEY, data TEXT)`);
     }
