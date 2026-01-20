@@ -80,11 +80,29 @@
         </div>
         
         <div class="test-section">
+            <h3>🔔 Webhook Configuration</h3>
+            <p>Configure a webhook URL to receive incoming messages automatically</p>
+            <div id="webhook-status" style="padding: 10px; margin: 10px 0; border-radius: 5px;"></div>
+            <input type="text" id="webhook-url" placeholder="https://your-server.com/webhook" style="width: 400px;" />
+            <button onclick="setWebhook()">Set Webhook</button>
+            <button onclick="disableWebhook()" style="background: #dc3545;">Disable Webhook</button>
+            <button onclick="checkWebhook()">Check Status</button>
+        </div>
+        
+        <div class="test-section">
             <h3>🧪 Test Message</h3>
             <p><strong>Phone Format:</strong> Enter with country code (e.g., 1234567890 for US, 447123456789 for UK)</p>
             <input type="text" id="phone" placeholder="Phone with country code" />
             <input type="text" id="message" placeholder="Test message" value="Hello from WhatsApp API!" />
             <button onclick="sendMessage()">Send Test Message</button>
+        </div>
+
+        <div class="test-section">
+            <h3>👤 Check WhatsApp User</h3>
+            <p><strong>Check if a phone number is on WhatsApp and get profile info:</strong></p>
+            <input type="text" id="check-phone" placeholder="Phone with country code" />
+            <button onclick="checkUser()">Check User</button>
+            <div id="user-result" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
         </div>
         
         <div class="test-section">
@@ -162,12 +180,12 @@ Content-Type: application/json
         async function sendMessage() {
             const phone = document.getElementById('phone').value;
             const message = document.getElementById('message').value;
-            
+
             if (!phone || !message) {
                 alert('Please enter phone and message');
                 return;
             }
-            
+
             try {
                 log(`Sending message to ${phone}...`);
                 const response = await fetch('/api/send', {
@@ -175,7 +193,7 @@ Content-Type: application/json
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ to: phone, message })
                 });
-                
+
                 const result = await response.json();
                 if (result.success) {
                     log(`✅ Message sent! ID: ${result.id}`);
@@ -184,6 +202,138 @@ Content-Type: application/json
                 }
             } catch (error) {
                 log('Send Error: ' + error.message);
+            }
+        }
+
+        async function checkUser() {
+            const phone = document.getElementById('check-phone').value;
+            const resultDiv = document.getElementById('user-result');
+
+            if (!phone) {
+                alert('Please enter a phone number');
+                return;
+            }
+
+            try {
+                log(`Checking user: ${phone}...`);
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#f8f9fa';
+                resultDiv.innerHTML = '⏳ Checking...';
+
+                const response = await fetch('/api/check-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.isWhatsAppUser) {
+                        let profileHtml = '';
+                        if (result.profilePicture) {
+                            profileHtml = `<img src="${result.profilePicture}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; margin: 10px 0;">`;
+                        }
+
+                        resultDiv.style.background = '#d4edda';
+                        resultDiv.style.color = '#155724';
+                        resultDiv.innerHTML = `
+                            <strong>✅ WhatsApp User Found!</strong><br>
+                            <strong>Phone:</strong> ${result.phone}<br>
+                            <strong>Name:</strong> ${result.name || 'N/A'}<br>
+                            <strong>Profile Picture:</strong><br>
+                            ${profileHtml || 'Not available (privacy settings)'}
+                        `;
+                        log(`✅ User found: ${result.name || 'N/A'}`);
+                    } else {
+                        resultDiv.style.background = '#fff3cd';
+                        resultDiv.style.color = '#856404';
+                        resultDiv.innerHTML = `
+                            <strong>❌ Not a WhatsApp User</strong><br>
+                            <strong>Phone:</strong> ${result.phone}<br>
+                            ${result.message}
+                        `;
+                        log(`⚠️ Not a WhatsApp user: ${phone}`);
+                    }
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                log('Check user error: ' + error.message);
+                resultDiv.style.background = '#f8d7da';
+                resultDiv.style.color = '#721c24';
+                resultDiv.innerHTML = `<strong>❌ Error:</strong> ${error.message}`;
+            }
+        }
+
+        async function checkWebhook() {
+            try {
+                log('Checking webhook status...');
+                const response = await fetch('/api/webhook');
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('webhook-status');
+                if (data.enabled) {
+                    statusDiv.style.background = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    statusDiv.innerHTML = `✅ Webhook Enabled: ${data.url || 'URL hidden'}`;
+                    document.getElementById('webhook-url').value = '';
+                    log('Webhook is enabled');
+                } else {
+                    statusDiv.style.background = '#f8d7da';
+                    statusDiv.style.color = '#721c24';
+                    statusDiv.innerHTML = '❌ Webhook Disabled';
+                    log('Webhook is disabled');
+                }
+            } catch (error) {
+                log('Webhook check error: ' + error.message);
+            }
+        }
+
+        async function setWebhook() {
+            const url = document.getElementById('webhook-url').value;
+            
+            if (!url) {
+                alert('Please enter a webhook URL');
+                return;
+            }
+            
+            try {
+                log(`Setting webhook to ${url}...`);
+                const response = await fetch('/api/webhook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    log('✅ Webhook configured successfully!');
+                    await checkWebhook();
+                } else {
+                    log(`❌ Failed: ${result.error}`);
+                }
+            } catch (error) {
+                log('Webhook setup error: ' + error.message);
+            }
+        }
+
+        async function disableWebhook() {
+            try {
+                log('Disabling webhook...');
+                const response = await fetch('/api/webhook', {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    log('✅ Webhook disabled');
+                    await checkWebhook();
+                } else {
+                    log(`❌ Failed: ${result.error}`);
+                }
+            } catch (error) {
+                log('Webhook disable error: ' + error.message);
             }
         }
 
@@ -197,6 +347,7 @@ Content-Type: application/json
         
         // Initial load
         refreshStatus();
+        checkWebhook();
     </script>
 </body>
 </html>

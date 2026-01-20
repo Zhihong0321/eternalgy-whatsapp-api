@@ -144,13 +144,13 @@
         <div class="endpoint">
             <h3><span class="method post">POST</span> /api/send</h3>
             <p>Send a WhatsApp message to a phone number.</p>
-            
+
             <h4>Request Body</h4>
             <pre>{
   "to": "1234567890",
   "message": "Hello from API!"
 }</pre>
-            
+
             <table>
                 <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
                 <tr><td>to</td><td>string</td><td>Yes</td><td>Phone number with country code (digits only)</td></tr>
@@ -168,6 +168,47 @@
             <pre>{
   "error": "WhatsApp not ready"
 }</pre>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> /api/check-user</h3>
+            <p>Check if a phone number is registered on WhatsApp and retrieve user information including name and profile picture.</p>
+
+            <h4>Request Body</h4>
+            <pre>{
+  "phone": "1234567890"
+}</pre>
+
+            <table>
+                <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+                <tr><td>phone</td><td>string</td><td>Yes</td><td>Phone number with country code (digits only)</td></tr>
+            </table>
+
+            <h4>Success Response (User exists)</h4>
+            <pre>{
+  "success": true,
+  "isWhatsAppUser": true,
+  "phone": "1234567890",
+  "name": "John Doe",
+  "profilePicture": "https://web.whatsapp.com/profile-pic-url"
+}</pre>
+
+            <h4>Success Response (User not found)</h4>
+            <pre>{
+  "success": true,
+  "isWhatsAppUser": false,
+  "phone": "1234567890",
+  "message": "This number is not a WhatsApp user"
+}</pre>
+
+            <h4>Error Response</h4>
+            <pre>{
+  "error": "Invalid phone number length. Include country code (10-15 digits total)"
+}</pre>
+
+            <div class="warning">
+                <strong>⚠️ Privacy Note:</strong> Some users may have privacy settings that prevent profile picture access. In such cases, <code>profilePicture</code> will be <code>null</code>.
+            </div>
         </div>
 
         <h2>Phone Number Format</h2>
@@ -210,6 +251,25 @@ if (result.success) {
   console.log('Message sent:', result.id);
 } else {
   console.error('Error:', result.error);
+}
+
+// Check user and get profile info
+const checkResponse = await fetch('/api/check-user', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    phone: '1234567890'
+  })
+});
+
+const user = await checkResponse.json();
+if (user.success) {
+  if (user.isWhatsAppUser) {
+    console.log('User found:', user.name);
+    console.log('Profile picture:', user.profilePicture);
+  } else {
+    console.log('Not a WhatsApp user');
+  }
 }</pre>
 
         <h3>Python (requests)</h3>
@@ -229,7 +289,20 @@ result = response.json()
 if result.get('success'):
     print(f"Message sent: {result['id']}")
 else:
-    print(f"Error: {result['error']}")</pre>
+    print(f"Error: {result['error']}")
+
+# Check user and get profile info
+check_response = requests.post('https://your-app.railway.app/api/check-user', json={
+    'phone': '1234567890'
+})
+
+user = check_response.json()
+if user.get('success'):
+    if user['isWhatsAppUser']:
+        print(f"User found: {user['name']}")
+        print(f"Profile picture: {user['profilePicture']}")
+    else:
+        print('Not a WhatsApp user')</pre>
 
         <h3>cURL</h3>
         <pre># Check status
@@ -241,6 +314,13 @@ curl -X POST https://your-app.railway.app/api/send \
   -d '{
     "to": "1234567890",
     "message": "Hello from cURL!"
+  }'
+
+# Check user and get profile info
+curl -X POST https://your-app.railway.app/api/check-user \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "1234567890"
   }'</pre>
 
         <h2>Error Codes</h2>
@@ -261,13 +341,79 @@ curl -X POST https://your-app.railway.app/api/send \
         </ul>
 
         <h2>Webhook Integration</h2>
-        <p>For production use, consider implementing webhooks to handle:</p>
-        <ul>
-            <li>Message delivery confirmations</li>
-            <li>Incoming message handling</li>
-            <li>Connection status changes</li>
-            <li>QR code refresh notifications</li>
-        </ul>
+        <p>Configure webhooks to automatically receive incoming WhatsApp messages.</p>
+
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> /api/webhook</h3>
+            <p>Get current webhook configuration status.</p>
+            
+            <h4>Response</h4>
+            <pre>{
+  "enabled": true,
+  "url": "https://your-server.com/webhook"
+}</pre>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> /api/webhook</h3>
+            <p>Configure webhook URL to receive incoming messages.</p>
+            
+            <h4>Request Body</h4>
+            <pre>{
+  "url": "https://your-server.com/webhook"
+}</pre>
+            
+            <h4>Success Response</h4>
+            <pre>{
+  "success": true,
+  "enabled": true,
+  "url": "https://your-server.com/webhook"
+}</pre>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">DELETE</span> /api/webhook</h3>
+            <p>Disable webhook notifications.</p>
+            
+            <h4>Response</h4>
+            <pre>{
+  "success": true,
+  "enabled": false
+}</pre>
+        </div>
+
+        <h3>Webhook Payload</h3>
+        <p>When a message is received, your webhook URL will receive a POST request with this payload:</p>
+        <pre>{
+  "id": "3EB0C767D71D42D5E1C5",
+  "from": "1234567890@c.us",
+  "fromName": "John Doe",
+  "body": "Hello!",
+  "timestamp": 1234567890,
+  "hasMedia": false,
+  "type": "chat",
+  "isGroup": false,
+  "chatName": "John Doe"
+}</pre>
+
+        <h3>Webhook Example Server</h3>
+        <pre>// Express.js webhook receiver
+const express = require('express');
+const app = express();
+
+app.use(express.json());
+
+app.post('/webhook', (req, res) => {
+  const message = req.body;
+  console.log('From:', message.fromName);
+  console.log('Message:', message.body);
+  
+  // Your logic here
+  
+  res.json({ success: true });
+});
+
+app.listen(3000);</pre>
 
         <div class="warning">
             <strong>🔒 Security Note:</strong> This API should be deployed behind authentication in production. Consider implementing API keys, rate limiting, and IP whitelisting.
