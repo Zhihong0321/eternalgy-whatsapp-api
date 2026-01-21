@@ -100,16 +100,22 @@ function initWhatsApp() {
     },
 
     async save(id, sessionData) {
-      // Handle if id is passed as object
-      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
-      await pool.query(
-        `INSERT INTO whatsapp_sessions (id, session_data, updated_at)
-         VALUES ($1, $2, CURRENT_TIMESTAMP)
-         ON CONFLICT (id) DO UPDATE
-         SET session_data = $2, updated_at = CURRENT_TIMESTAMP`,
-        [sessionId, JSON.stringify(sessionData)]
-      );
-      console.log('💾 Session saved to PostgreSQL:', sessionId);
+      try {
+        // Handle if id is passed as object
+        const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
+        console.log('💾 [SAVE CALLED] Saving session:', sessionId);
+        await pool.query(
+          `INSERT INTO whatsapp_sessions (id, session_data, updated_at)
+           VALUES ($1, $2, CURRENT_TIMESTAMP)
+           ON CONFLICT (id) DO UPDATE
+           SET session_data = $2, updated_at = CURRENT_TIMESTAMP`,
+          [sessionId, JSON.stringify(sessionData)]
+        );
+        console.log('✅ Session saved to PostgreSQL:', sessionId);
+      } catch (error) {
+        console.error('❌ ERROR saving session:', error.message);
+        throw error;
+      }
     },
 
     async delete(id) {
