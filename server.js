@@ -29,20 +29,6 @@ const pool = new Pool({
   ssl: dbUrl ? { rejectUnauthorized: false } : false
 });
 
-// Drop old table if exists (in case of schema mismatch) and recreate with correct schema
-pool.query(`
-  DROP TABLE IF EXISTS whatsapp_sessions
-`).then(() => {
-  return pool.query(`
-    CREATE TABLE whatsapp_sessions (
-      id VARCHAR(100) PRIMARY KEY,
-      session_data JSONB NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  console.log('✅ whatsapp_sessions table created with correct schema');
-}).catch(err => console.error('Failed to create sessions table:', err.message));
-
 // Root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -399,8 +385,20 @@ app.delete('/api/webhook', (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
-  initWhatsApp();
-});
+// Start server and WhatsApp after database is ready
+(async () => {
+  // Wait for table creation
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+      id VARCHAR(100) PRIMARY KEY,
+      session_data JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  console.log('✅ Database table ready');
+
+  app.listen(PORT, () => {
+    console.log(`🌐 Server running on port ${PORT}`);
+    initWhatsApp();
+  });
+})();
