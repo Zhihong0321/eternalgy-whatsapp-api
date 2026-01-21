@@ -16,9 +16,17 @@ let webhookUrl = process.env.WEBHOOK_URL || null;
 let webhookEnabled = false;
 
 // PostgreSQL connection for session storage
+const dbUrl = process.env.DATABASE_URL;
+if (dbUrl) {
+  // Log masked connection info for debugging
+  const maskedUrl = dbUrl.replace(/:[^:@]+@/, ':***@');
+  console.log('🔗 Database URL:', maskedUrl);
+} else {
+  console.log('⚠️  WARNING: DATABASE_URL not set!');
+}
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  connectionString: dbUrl,
+  ssl: dbUrl ? { rejectUnauthorized: false } : false
 });
 
 // Drop old table if exists (in case of schema mismatch) and recreate with correct schema
