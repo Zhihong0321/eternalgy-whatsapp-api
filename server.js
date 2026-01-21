@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { Pool } = require('pg');
 const qrcode = require('qrcode');
 const axios = require('axios');
 
@@ -13,6 +14,21 @@ app.use(express.static('public'));
 // Webhook configuration
 let webhookUrl = process.env.WEBHOOK_URL || null;
 let webhookEnabled = false;
+
+// PostgreSQL connection for session storage
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+});
+
+// Create sessions table if it doesn't exist
+pool.query(`
+  CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+    id VARCHAR(50) PRIMARY KEY,
+    session_data JSONB NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`).catch(err => console.error('Failed to create sessions table:', err.message));
 
 // Root route
 app.get('/', (req, res) => {
@@ -70,9 +86,52 @@ function initWhatsApp() {
   if (executablePath) {
     puppeteerConfig.executablePath = executablePath;
   }
-  
+
+  // PostgreSQL Store implementation for RemoteAuth
+  const store = {
+    async sessionExists(id) {
+      const result = await pool.query(
+        'SELECT id FROM whatsapp_sessions WHERE id = $1',
+        [id]
+      );
+      return !!result.rows.length;
+    },
+
+    async save(id, sessionData) {
+      await pool.query(
+        `INSERT INTO whatsapp_sessions (id, session_data, updated_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO UPDATE
+         SET session_data = $2, updated_at = CURRENT_TIMESTAMP`,
+        [id, JSON.stringify(sessionData)]
+      );
+      console.log('💾 Session saved to PostgreSQL:', id);
+    },
+
+    async delete(id) {
+      await pool.query('DELETE FROM whatsapp_sessions WHERE id = $1', [id]);
+      console.log('🗑️  Session deleted from PostgreSQL:', id);
+    },
+
+    async retrieve(id) {
+      const result = await pool.query(
+        'SELECT session_data FROM whatsapp_sessions WHERE id = $1',
+        [id]
+      );
+      if (result.rows.length) {
+        console.log('📥 Session retrieved from PostgreSQL:', id);
+        return JSON.parse(result.rows[0].session_data);
+      }
+      return null;
+    }
+  };
+
   client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new RemoteAuth({
+      store: store,
+      clientId: 'whatsapp-api-session',
+      backupSyncIntervalMs: 300000
+    }),
     puppeteer: puppeteerConfig
   });
 

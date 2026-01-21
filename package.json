@@ -12,6 +12,7 @@
     "axios": "^1.6.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "pg": "^8.11.3",
     "qrcode": "^1.5.4",
     "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main"
   },
