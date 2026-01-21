@@ -1,7 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { Client, RemoteAuth } = require('whatsapp-web.js');
-const { Pool } = require('pg');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const axios = require('axios');
 
@@ -14,20 +13,6 @@ app.use(express.static('public'));
 // Webhook configuration
 let webhookUrl = process.env.WEBHOOK_URL || null;
 let webhookEnabled = false;
-
-// PostgreSQL connection for session storage
-const dbUrl = process.env.DATABASE_URL;
-if (dbUrl) {
-  // Log masked connection info for debugging
-  const maskedUrl = dbUrl.replace(/:[^:@]+@/, ':***@');
-  console.log('🔗 Database URL:', maskedUrl);
-} else {
-  console.log('⚠️  WARNING: DATABASE_URL not set!');
-}
-const pool = new Pool({
-  connectionString: dbUrl,
-  ssl: dbUrl ? { rejectUnauthorized: false } : false
-});
 
 // Root route
 app.get('/', (req, res) => {
@@ -86,66 +71,17 @@ function initWhatsApp() {
     puppeteerConfig.executablePath = executablePath;
   }
 
-  // PostgreSQL Store implementation for RemoteAuth
-  const store = {
-    async sessionExists(id) {
-      // Handle if id is passed as object
-      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
-      console.log('🔍 Checking session exists:', sessionId);
-      const result = await pool.query(
-        'SELECT id FROM whatsapp_sessions WHERE id = $1',
-        [sessionId]
-      );
-      return !!result.rows.length;
-    },
-
-    async save(id, sessionData) {
-      try {
-        // Handle if id is passed as object
-        const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
-        console.log('💾 [SAVE CALLED] Saving session:', sessionId);
-        await pool.query(
-          `INSERT INTO whatsapp_sessions (id, session_data, updated_at)
-           VALUES ($1, $2, CURRENT_TIMESTAMP)
-           ON CONFLICT (id) DO UPDATE
-           SET session_data = $2, updated_at = CURRENT_TIMESTAMP`,
-          [sessionId, JSON.stringify(sessionData)]
-        );
-        console.log('✅ Session saved to PostgreSQL:', sessionId);
-      } catch (error) {
-        console.error('❌ ERROR saving session:', error.message);
-        throw error;
-      }
-    },
-
-    async delete(id) {
-      // Handle if id is passed as object
-      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
-      await pool.query('DELETE FROM whatsapp_sessions WHERE id = $1', [sessionId]);
-      console.log('🗑️  Session deleted from PostgreSQL:', sessionId);
-    },
-
-    async retrieve(id) {
-      // Handle if id is passed as object
-      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
-      console.log('📥 Retrieving session:', sessionId);
-      const result = await pool.query(
-        'SELECT session_data FROM whatsapp_sessions WHERE id = $1',
-        [sessionId]
-      );
-      if (result.rows.length) {
-        console.log('✅ Session retrieved from PostgreSQL:', sessionId);
-        return JSON.parse(result.rows[0].session_data);
-      }
-      return null;
-    }
-  };
+  // Use /tmp for session storage (persists in Railway)
+  const fs = require('fs');
+  const sessionPath = '/tmp/.wwebjs_auth';
+  if (!fs.existsSync(sessionPath)) {
+    fs.mkdirSync(sessionPath, { recursive: true });
+  }
 
   client = new Client({
-    authStrategy: new RemoteAuth({
-      store: store,
-      clientId: 'whatsapp-api-session',
-      backupSyncIntervalMs: 300000
+    authStrategy: new LocalAuth({
+      dataPath: sessionPath,
+      clientId: 'whatsapp-api-session'
     }),
     puppeteer: puppeteerConfig
   });
@@ -391,20 +327,8 @@ app.delete('/api/webhook', (req, res) => {
   });
 });
 
-// Start server and WhatsApp after database is ready
-(async () => {
-  // Wait for table creation
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS whatsapp_sessions (
-      id VARCHAR(100) PRIMARY KEY,
-      session_data JSONB NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  console.log('✅ Database table ready');
-
-  app.listen(PORT, () => {
-    console.log(`🌐 Server running on port ${PORT}`);
-    initWhatsApp();
-  });
-})();
+// Start server
+app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`);
+  initWhatsApp();
+});
