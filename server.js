@@ -21,14 +21,19 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Create sessions table if it doesn't exist
+// Drop old table if exists (in case of schema mismatch) and recreate with correct schema
 pool.query(`
-  CREATE TABLE IF NOT EXISTS whatsapp_sessions (
-    id VARCHAR(50) PRIMARY KEY,
-    session_data JSONB NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )
-`).catch(err => console.error('Failed to create sessions table:', err.message));
+  DROP TABLE IF EXISTS whatsapp_sessions
+`).then(() => {
+  return pool.query(`
+    CREATE TABLE whatsapp_sessions (
+      id VARCHAR(100) PRIMARY KEY,
+      session_data JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  console.log('✅ whatsapp_sessions table created with correct schema');
+}).catch(err => console.error('Failed to create sessions table:', err.message));
 
 // Root route
 app.get('/', (req, res) => {
