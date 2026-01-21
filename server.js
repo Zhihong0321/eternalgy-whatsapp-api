@@ -90,36 +90,46 @@ function initWhatsApp() {
   // PostgreSQL Store implementation for RemoteAuth
   const store = {
     async sessionExists(id) {
+      // Handle if id is passed as object
+      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
+      console.log('🔍 Checking session exists:', sessionId);
       const result = await pool.query(
         'SELECT id FROM whatsapp_sessions WHERE id = $1',
-        [id]
+        [sessionId]
       );
       return !!result.rows.length;
     },
 
     async save(id, sessionData) {
+      // Handle if id is passed as object
+      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
       await pool.query(
         `INSERT INTO whatsapp_sessions (id, session_data, updated_at)
          VALUES ($1, $2, CURRENT_TIMESTAMP)
          ON CONFLICT (id) DO UPDATE
          SET session_data = $2, updated_at = CURRENT_TIMESTAMP`,
-        [id, JSON.stringify(sessionData)]
+        [sessionId, JSON.stringify(sessionData)]
       );
-      console.log('💾 Session saved to PostgreSQL:', id);
+      console.log('💾 Session saved to PostgreSQL:', sessionId);
     },
 
     async delete(id) {
-      await pool.query('DELETE FROM whatsapp_sessions WHERE id = $1', [id]);
-      console.log('🗑️  Session deleted from PostgreSQL:', id);
+      // Handle if id is passed as object
+      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
+      await pool.query('DELETE FROM whatsapp_sessions WHERE id = $1', [sessionId]);
+      console.log('🗑️  Session deleted from PostgreSQL:', sessionId);
     },
 
     async retrieve(id) {
+      // Handle if id is passed as object
+      const sessionId = typeof id === 'object' ? id.session || id.id || JSON.stringify(id) : id;
+      console.log('📥 Retrieving session:', sessionId);
       const result = await pool.query(
         'SELECT session_data FROM whatsapp_sessions WHERE id = $1',
-        [id]
+        [sessionId]
       );
       if (result.rows.length) {
-        console.log('📥 Session retrieved from PostgreSQL:', id);
+        console.log('✅ Session retrieved from PostgreSQL:', sessionId);
         return JSON.parse(result.rows[0].session_data);
       }
       return null;
