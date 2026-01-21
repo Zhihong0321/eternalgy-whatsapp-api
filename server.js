@@ -72,7 +72,6 @@ function initWhatsApp() {
   }
 
   // Use /tmp for session storage (persists in Railway)
-  const fs = require('fs');
   const sessionPath = '/tmp/.wwebjs_auth';
   if (!fs.existsSync(sessionPath)) {
     fs.mkdirSync(sessionPath, { recursive: true });
