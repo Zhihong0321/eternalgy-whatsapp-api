@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const axios = require('axios');
@@ -28,13 +29,46 @@ app.get('/api/docs', (req, res) => {
 let client = null;
 let qrString = null;
 let isReady = false;
+let lastQrAt = null;
+let lastReadyAt = null;
+let lastAuthAt = null;
+let lastDisconnectAt = null;
+const statePath = process.env.WWEBJS_STATE_PATH || '/storage/.wwebjs_state.json';
+
+function writeStateFile() {
+  try {
+    const payload = {
+      ready: isReady,
+      hasQR: !!qrString,
+      qr: qrString || null,
+      lastQrAt,
+      lastReadyAt,
+      lastAuthAt,
+      lastDisconnectAt,
+      updatedAt: new Date().toISOString()
+    };
+    fs.writeFileSync(statePath, JSON.stringify(payload));
+  } catch (err) {
+    console.error('⚠️ Failed to write state file:', err && err.message ? err.message : err);
+  }
+}
+
+function readStateFile() {
+  try {
+    if (!fs.existsSync(statePath)) return null;
+    const raw = fs.readFileSync(statePath, 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('⚠️ Failed to read state file:', err && err.message ? err.message : err);
+    return null;
+  }
+}
 
 // Initialize WhatsApp client
 function initWhatsApp() {
   console.log('🚀 Initializing WhatsApp client...');
   
   // Railway Chrome executable detection
-  const fs = require('fs');
   let executablePath;
   
   // Check for Railway/nixpacks Chrome paths
@@ -98,21 +132,29 @@ function initWhatsApp() {
   client.on('qr', (qr) => {
     console.log('📱 QR Code received');
     qrString = qr;
+    lastQrAt = new Date().toISOString();
+    writeStateFile();
   });
 
   client.on('ready', () => {
     console.log('✅ WhatsApp client is ready!');
     isReady = true;
     qrString = null;
+    lastReadyAt = new Date().toISOString();
+    writeStateFile();
   });
 
   client.on('authenticated', () => {
     console.log('🔐 WhatsApp authenticated');
+    lastAuthAt = new Date().toISOString();
+    writeStateFile();
   });
 
   client.on('disconnected', (reason) => {
     console.log('❌ WhatsApp disconnected:', reason);
     isReady = false;
+    lastDisconnectAt = new Date().toISOString();
+    writeStateFile();
   });
 
   // Message received handler - triggers webhook
@@ -185,9 +227,24 @@ app.get('/api/status', (req, res) => {
     'Expires': '0',
     'Surrogate-Control': 'no-store'
   });
+  let ready = isReady;
+  let hasQR = !!qrString;
+
+  if (!ready && !hasQR) {
+    const state = readStateFile();
+    if (state && (state.ready || state.hasQR)) {
+      ready = !!state.ready;
+      hasQR = !!state.hasQR;
+    }
+  }
+
   res.json({
-    ready: isReady,
-    hasQR: !!qrString
+    ready,
+    hasQR,
+    lastQrAt,
+    lastReadyAt,
+    lastAuthAt,
+    lastDisconnectAt
   });
 });
 
@@ -198,12 +255,19 @@ app.get('/api/qr', async (req, res) => {
     'Expires': '0',
     'Surrogate-Control': 'no-store'
   });
-  if (!qrString) {
+  let qrValue = qrString;
+  if (!qrValue) {
+    const state = readStateFile();
+    if (state && state.qr) {
+      qrValue = state.qr;
+    }
+  }
+  if (!qrValue) {
     return res.json({ qr: null });
   }
   
   try {
-    const qrImage = await qrcode.toDataURL(qrString);
+    const qrImage = await qrcode.toDataURL(qrValue);
     res.json({ qr: qrImage });
   } catch (error) {
     res.status(500).json({ error: error.message });
