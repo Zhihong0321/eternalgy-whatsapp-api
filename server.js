@@ -33,6 +33,7 @@ let lastQrAt = null;
 let lastReadyAt = null;
 let lastAuthAt = null;
 let lastDisconnectAt = null;
+let lastClientState = null;
 const statePath = process.env.WWEBJS_STATE_PATH || '/storage/.wwebjs_state.json';
 
 function writeStateFile() {
@@ -45,6 +46,7 @@ function writeStateFile() {
       lastReadyAt,
       lastAuthAt,
       lastDisconnectAt,
+      lastClientState,
       updatedAt: new Date().toISOString()
     };
     fs.writeFileSync(statePath, JSON.stringify(payload));
@@ -157,6 +159,24 @@ function initWhatsApp() {
     writeStateFile();
   });
 
+  // Periodically check client state in case events are missed
+  setInterval(async () => {
+    try {
+      const state = await client.getState();
+      if (state && state !== lastClientState) {
+        lastClientState = state;
+        console.log('ℹ️ WhatsApp client state:', state);
+      }
+      if (state === 'CONNECTED' && !isReady) {
+        isReady = true;
+        lastReadyAt = new Date().toISOString();
+      }
+      writeStateFile();
+    } catch (err) {
+      // Ignore transient state errors
+    }
+  }, 5000);
+
   // Message received handler - triggers webhook
   client.on('message', async (message) => {
     console.log('📨 Message received:', {
@@ -241,10 +261,12 @@ app.get('/api/status', (req, res) => {
   res.json({
     ready,
     hasQR,
+    authenticated: !!lastAuthAt,
     lastQrAt,
     lastReadyAt,
     lastAuthAt,
-    lastDisconnectAt
+    lastDisconnectAt,
+    lastClientState
   });
 });
 
