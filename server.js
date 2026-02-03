@@ -71,10 +71,20 @@ function initWhatsApp() {
     puppeteerConfig.executablePath = executablePath;
   }
 
-  // Use Railway persistent volume for session storage (default: /storage)
+  // Use Railway persistent volume for session storage (default: /storage).
+  // Fail fast if storage is missing or not writable.
   const sessionPath = process.env.WWEBJS_AUTH_PATH || '/storage/.wwebjs_auth';
-  if (!fs.existsSync(sessionPath)) {
-    fs.mkdirSync(sessionPath, { recursive: true });
+  try {
+    if (!fs.existsSync(sessionPath)) {
+      fs.mkdirSync(sessionPath, { recursive: true });
+    }
+    const testFile = path.join(sessionPath, '.rw_test');
+    fs.writeFileSync(testFile, 'ok');
+    fs.unlinkSync(testFile);
+  } catch (err) {
+    console.error('❌ Persistent storage not available or not writable:', sessionPath);
+    console.error(err && err.message ? err.message : err);
+    process.exit(1);
   }
 
   client = new Client({
