@@ -358,21 +358,31 @@ app.get('/api/qr', async (req, res) => {
 app.post('/api/send', async (req, res) => {
   const { to, message } = req.body;
 
+  console.log(`📤 SEND REQUEST - Raw 'to': "${to}", Message: "${message?.substring(0, 50)}..."`);
+
   if (!isReady) {
     return res.status(400).json({ error: 'WhatsApp not ready' });
   }
 
   try {
+    if (!to) {
+      throw new Error('Phone number ("to") is required');
+    }
+
     // Format phone number for WhatsApp
     let formattedNumber = to.replace(/\D/g, ''); // Remove non-digits
+    
+    console.log(`📞 Formatted number: "${formattedNumber}" (${formattedNumber.length} digits)`);
 
     // Validate number length (should be 10-15 digits with country code)
     if (formattedNumber.length < 10 || formattedNumber.length > 15) {
-      throw new Error('Invalid phone number length. Include country code (10-15 digits total)');
+      throw new Error(`Invalid phone number: "${to}" -> "${formattedNumber}" (${formattedNumber.length} digits). Include country code (10-15 digits total)`);
     }
 
     // WhatsApp format: number@c.us
     const chatId = formattedNumber + '@c.us';
+    
+    console.log(`💬 Sending to chatId: ${chatId}`);
 
     console.log(`📤 Sending message to ${chatId}: ${message}`);
 
