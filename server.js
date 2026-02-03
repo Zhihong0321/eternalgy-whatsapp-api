@@ -254,10 +254,14 @@ function initWhatsApp() {
   // WEBHOOK TRIGGER - Use message_create (works for both incoming and outgoing)
   client.on('message_create', async (msg) => {
     console.log('📝 MESSAGE_CREATE:', msg.from, msg.body?.substring(0, 30), '| fromMe:', msg.fromMe);
+    console.log('   DEBUG: webhookEnabled=', webhookEnabled, 'webhookUrl=', webhookUrl ? 'SET' : 'NULL', 'fromMe=', msg.fromMe);
     lastMessageActivity = Date.now();
     
     // Only trigger webhook for INCOMING messages (not from me)
-    if (!msg.fromMe && webhookEnabled && webhookUrl) {
+    const shouldTrigger = !msg.fromMe && webhookEnabled && webhookUrl;
+    console.log('   DEBUG: shouldTrigger=', shouldTrigger);
+    
+    if (shouldTrigger) {
       const webhookStartTime = Date.now();
       const logId = Math.random().toString(36).substring(2, 10).toUpperCase();
       
