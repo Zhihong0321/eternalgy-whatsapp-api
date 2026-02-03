@@ -187,25 +187,7 @@ function initWhatsApp() {
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--disable-web-security',
-      '--disable-features=VizDisplayCompositor',
-      '--single-process',  // Run in single process mode to avoid profile lock
-      '--no-zygote',       // Disable zygote process
-      '--disable-background-networking',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-breakpad',
-      '--disable-client-side-phishing-detection',
-      '--disable-component-update',
-      '--disable-default-apps',
-      '--disable-extensions',
-      '--disable-hang-monitor',
-      '--disable-ipc-flooding-protection',
-      '--disable-popup-blocking',
-      '--disable-prompt-on-repost',
-      '--disable-renderer-backgrounding',
-      '--force-color-profile=srgb',
-      '--metrics-recording-only',
-      '--safebrowsing-disable-auto-update'
+      '--disable-features=VizDisplayCompositor'
     ]
   };
   
@@ -229,20 +211,6 @@ function initWhatsApp() {
     console.error(err && err.message ? err.message : err);
     process.exit(1);
   }
-
-  // Clear any locked Chrome profiles before starting
-  const chromeProfilePath = path.join(sessionPath, 'chrome-profile');
-  try {
-    if (fs.existsSync(chromeProfilePath)) {
-      fs.rmSync(chromeProfilePath, { recursive: true, force: true });
-      console.log('🗑️  Cleared old Chrome profile');
-    }
-  } catch (e) {
-    console.log('⚠️  Could not clear old Chrome profile:', e.message);
-  }
-
-  // Add user data directory to puppeteer config
-  puppeteerConfig.args.push(`--user-data-dir=${chromeProfilePath}`);
 
   client = new Client({
     authStrategy: new LocalAuth({
