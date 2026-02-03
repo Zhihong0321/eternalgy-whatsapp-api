@@ -15,7 +15,16 @@ app.use(express.static('public'));
 
 // Webhook configuration
 let webhookUrl = process.env.WEBHOOK_URL || null;
-let webhookEnabled = false;
+let webhookEnabled = !!process.env.WEBHOOK_URL;  // Auto-enable if env var is set
+
+// Log initial webhook state on startup
+if (webhookEnabled) {
+  console.log(`🔔 Webhook auto-configured from environment:`);
+  console.log(`   URL: ${webhookUrl}`);
+  console.log(`   Status: ENABLED`);
+} else {
+  console.log(`🔕 Webhook not configured (set WEBHOOK_URL env var to enable)`);
+}
 
 // Root route
 app.get('/', (req, res) => {
@@ -225,6 +234,8 @@ function initWhatsApp() {
     });
 
     // Trigger webhook if enabled
+    console.log(`🔔 Webhook check - Enabled: ${webhookEnabled}, URL: ${webhookUrl ? 'SET' : 'NOT SET'}`);
+    
     if (webhookEnabled && webhookUrl) {
       const webhookStartTime = Date.now();
       const logId = Math.random().toString(36).substring(2, 10).toUpperCase();
