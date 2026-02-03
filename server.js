@@ -481,16 +481,23 @@ app.get('/api/webhook', async (req, res) => {
     });
   }
   
-  // Actually test the webhook with a ping
-  console.log(`🧪 Testing webhook connectivity...`);
+  // Actually test the webhook with a test message
+  console.log(`🧪 Testing webhook with message schema...`);
   
   try {
-    // Send a test ping to the webhook
+    // Send a test payload that matches the actual WhatsApp message schema
     const testPayload = {
-      type: 'ping',
-      checkId: checkId,
-      timestamp: Date.now(),
-      message: 'Webhook connectivity test from WhatsApp API'
+      id: `test_${checkId}`,
+      from: 'test@c.us',
+      fromName: 'Webhook Test',
+      body: `[TEST] Webhook connectivity check - ID: ${checkId}`,
+      timestamp: Math.floor(Date.now() / 1000),
+      hasMedia: false,
+      type: 'chat',
+      isGroup: false,
+      chatName: 'Webhook Test',
+      _test: true,
+      _checkId: checkId
     };
     
     const response = await axios.post(webhookUrl, testPayload, {
