@@ -251,6 +251,17 @@ function initWhatsApp() {
   // DEBUG: Listen to ALL events to see what's happening
   client.on('message_create', (msg) => {
     console.log('📝 MESSAGE_CREATE event:', msg.from, msg.body?.substring(0, 30));
+    console.log('   isStatus:', msg.isStatus, '| fromMe:', msg.fromMe, '| deviceType:', msg.deviceType);
+  });
+
+  // Alternative event for incoming messages
+  client.on('chat_new_message', (msg) => {
+    console.log('💬 CHAT_NEW_MESSAGE event:', msg.from, msg.body?.substring(0, 30));
+  });
+  
+  // Group message event
+  client.on('group_join', (notification) => {
+    console.log('👥 GROUP_JOIN event:', notification.chatId);
   });
 
   client.on('message_ack', (msg, ack) => {
@@ -426,18 +437,37 @@ app.get('/api', (req, res) => {
   });
 });
 
-app.get('/api/status', (req, res) => {
+app.get('/api/status', async (req, res) => {
   setNoCache(res);
   const state = getEffectiveState();
+  
+  // Get actual client state if available
+  let actualState = null;
+  let isConnected = false;
+  if (client) {
+    try {
+      actualState = await client.getState();
+      isConnected = actualState === 'CONNECTED';
+    } catch (e) {
+      actualState = 'ERROR: ' + e.message;
+    }
+  }
+  
   res.json({
     ready: state.ready,
+    isConnected: isConnected,
+    actualState: actualState,
     hasQR: state.hasQR,
     authenticated: !!state.lastAuthAt,
     lastQrAt: state.lastQrAt,
     lastReadyAt: state.lastReadyAt,
     lastAuthAt: state.lastAuthAt,
     lastDisconnectAt: state.lastDisconnectAt,
-    lastClientState: state.lastClientState
+    lastClientState: state.lastClientState,
+    webhook: {
+      enabled: webhookEnabled,
+      url: webhookUrl ? 'SET' : 'NOT SET'
+    }
   });
 });
 
