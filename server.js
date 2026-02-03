@@ -159,6 +159,18 @@ function readStateFile() {
 function initWhatsApp() {
   console.log('🚀 Initializing WhatsApp client...');
   
+  // Clear old Chrome lock files to prevent "profile in use" error
+  const sessionPath = AUTH_PATH;
+  const lockFile = path.join(sessionPath, 'session-whatsapp-api-session', 'SingletonLock');
+  try {
+    if (fs.existsSync(lockFile)) {
+      fs.unlinkSync(lockFile);
+      console.log('🗑️  Cleared old Chrome lock file');
+    }
+  } catch (e) {
+    console.log('⚠️  Could not clear lock file:', e.message);
+  }
+  
   // Railway Chrome executable detection
   let executablePath;
   
@@ -198,7 +210,6 @@ function initWhatsApp() {
 
   // Use Railway persistent volume for session storage (default: /storage).
   // Fail fast if storage is missing or not writable.
-  const sessionPath = AUTH_PATH;
   try {
     if (!fs.existsSync(sessionPath)) {
       fs.mkdirSync(sessionPath, { recursive: true });
