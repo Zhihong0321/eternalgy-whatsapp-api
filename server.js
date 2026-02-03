@@ -268,20 +268,27 @@ function initWhatsApp() {
 
   // Message received handler - triggers webhook
   client.on('message', async (message) => {
-    const receivedAt = new Date().toISOString();
-    const msgId = message.id ? message.id._serialized : 'unknown';
-    
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📨 MESSAGE RECEIVED EVENT');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`🆔 Message ID: ${msgId}`);
-    console.log(`👤 From: ${message.from}`);
-    console.log(`💬 Body: ${message.body || '(empty)'}`);
-    console.log(`⏰ Timestamp: ${message.timestamp}`);
-    console.log(`📊 Type: ${message.type}`);
-    console.log(`🕐 Received at: ${receivedAt}`);
-    console.log(`🔔 Webhook State: Enabled=${webhookEnabled}, URL=${webhookUrl ? 'SET' : 'NULL'}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    try {
+      // Defensive: message might be malformed
+      if (!message) {
+        console.log('❌ MESSAGE EVENT: message is null/undefined');
+        return;
+      }
+      
+      const receivedAt = new Date().toISOString();
+      const msgId = message.id?._serialized || message.id || 'unknown';
+      
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📨 MESSAGE RECEIVED EVENT');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`🆔 Message ID: ${msgId}`);
+      console.log(`👤 From: ${message.from || 'unknown'}`);
+      console.log(`💬 Body: ${message.body || '(empty)'}`);
+      console.log(`⏰ Timestamp: ${message.timestamp}`);
+      console.log(`📊 Type: ${message.type || 'unknown'}`);
+      console.log(`🕐 Received at: ${receivedAt}`);
+      console.log(`🔔 Webhook State: Enabled=${webhookEnabled}, URL=${webhookUrl ? 'SET' : 'NULL'}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     // Trigger webhook if enabled
     if (webhookEnabled && webhookUrl) {
@@ -360,6 +367,12 @@ function initWhatsApp() {
       }
     } else {
       console.log(`🔕 Webhook skipped: ${!webhookEnabled ? 'disabled' : 'no URL configured'}`);
+    }
+    } catch (handlerError) {
+      console.error('💥💥💥 MESSAGE HANDLER CRASHED 💥💥💥');
+      console.error('Error:', handlerError.message);
+      console.error('Stack:', handlerError.stack);
+      console.error('💥💥💥 END CRASH REPORT 💥💥💥\n');
     }
   });
 
