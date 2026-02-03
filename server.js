@@ -215,14 +215,27 @@ function initWhatsApp() {
 
   // Message received handler - triggers webhook
   client.on('message', async (message) => {
+    const receivedAt = new Date().toISOString();
+    
     console.log('📨 Message received:', {
       from: message.from,
       body: message.body,
-      timestamp: message.timestamp
+      timestamp: message.timestamp,
+      receivedAt: receivedAt
     });
 
     // Trigger webhook if enabled
     if (webhookEnabled && webhookUrl) {
+      const webhookStartTime = Date.now();
+      const logId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`🔔 WEBHOOK FIRE [${logId}] - START`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`⏰ Time: ${new Date().toISOString()}`);
+      console.log(`🎯 URL: ${webhookUrl}`);
+      console.log(`📋 Webhook Status: ${webhookEnabled ? 'ENABLED' : 'DISABLED'}`);
+      
       try {
         const contact = await message.getContact();
         const chat = await message.getChat();
@@ -239,17 +252,41 @@ function initWhatsApp() {
           chatName: chat.name
         };
 
-        console.log('🔔 Triggering webhook:', webhookUrl);
+        console.log(`📦 Payload:`);
+        console.log(JSON.stringify(webhookPayload, null, 2));
+        console.log(`🚀 Sending POST request...`);
         
-        await axios.post(webhookUrl, webhookPayload, {
+        const response = await axios.post(webhookUrl, webhookPayload, {
           headers: { 'Content-Type': 'application/json' },
           timeout: 10000
         });
         
-        console.log('✅ Webhook triggered successfully');
+        const duration = Date.now() - webhookStartTime;
+        
+        console.log(`✅ WEBHOOK SUCCESS [${logId}]`);
+        console.log(`⏱️  Duration: ${duration}ms`);
+        console.log(`📊 Response Status: ${response.status}`);
+        console.log(`📄 Response Data:`, response.data);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+        
       } catch (error) {
-        console.error('❌ Webhook error:', error.message);
+        const duration = Date.now() - webhookStartTime;
+        
+        console.error(`❌ WEBHOOK FAILED [${logId}]`);
+        console.error(`⏱️  Duration: ${duration}ms`);
+        console.error(`💥 Error: ${error.message}`);
+        
+        if (error.response) {
+          console.error(`📊 Response Status: ${error.response.status}`);
+          console.error(`📄 Response Data:`, error.response.data);
+        } else if (error.request) {
+          console.error(`📡 No response received from server`);
+        }
+        
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
       }
+    } else {
+      console.log(`🔕 Webhook skipped: ${!webhookEnabled ? 'disabled' : 'no URL configured'}`);
     }
   });
 
