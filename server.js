@@ -439,11 +439,117 @@ app.post('/api/check-user', async (req, res) => {
 });
 
 // Webhook management endpoints
-app.get('/api/webhook', (req, res) => {
-  res.json({
+app.get('/api/webhook', async (req, res) => {
+  const checkId = Math.random().toString(36).substring(2, 10).toUpperCase();
+  const startTime = Date.now();
+  
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`🔍 WEBHOOK CHECK [${checkId}] - STARTING`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`⏰ Time: ${new Date().toISOString()}`);
+  console.log(`📋 Configured URL: ${webhookUrl || 'NOT SET'}`);
+  console.log(`📊 Enabled: ${webhookEnabled}`);
+  
+  // Basic info response
+  const basicInfo = {
     enabled: webhookEnabled,
-    url: webhookUrl ? webhookUrl.replace(/(?<=:\/\/).*(?=@)/, '***') : null // Hide credentials if any
-  });
+    url: webhookUrl ? webhookUrl.replace(/(?<=:\/\/).*(?=@)/, '***') : null,
+    checkId: checkId,
+    checkedAt: new Date().toISOString()
+  };
+  
+  // If no webhook configured, return early
+  if (!webhookUrl) {
+    console.log(`⚠️  No webhook URL configured`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    return res.json({
+      ...basicInfo,
+      status: 'NOT_CONFIGURED',
+      reachable: false,
+      message: 'Webhook URL is not set'
+    });
+  }
+  
+  if (!webhookEnabled) {
+    console.log(`⚠️  Webhook is DISABLED`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    return res.json({
+      ...basicInfo,
+      status: 'DISABLED',
+      reachable: false,
+      message: 'Webhook is disabled'
+    });
+  }
+  
+  // Actually test the webhook with a ping
+  console.log(`🧪 Testing webhook connectivity...`);
+  
+  try {
+    // Send a test ping to the webhook
+    const testPayload = {
+      type: 'ping',
+      checkId: checkId,
+      timestamp: Date.now(),
+      message: 'Webhook connectivity test from WhatsApp API'
+    };
+    
+    const response = await axios.post(webhookUrl, testPayload, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000,
+      validateStatus: () => true // Accept any status code
+    });
+    
+    const duration = Date.now() - startTime;
+    
+    console.log(`✅ WEBHOOK CHECK SUCCESS [${checkId}]`);
+    console.log(`⏱️  Response Time: ${duration}ms`);
+    console.log(`📊 Status Code: ${response.status}`);
+    console.log(`📄 Response:`, response.data);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    
+    // Determine health based on status code
+    const isHealthy = response.status >= 200 && response.status < 300;
+    
+    res.json({
+      ...basicInfo,
+      status: isHealthy ? 'HEALTHY' : 'UNHEALTHY',
+      reachable: true,
+      healthy: isHealthy,
+      responseTime: `${duration}ms`,
+      httpStatus: response.status,
+      httpStatusText: response.statusText,
+      responsePreview: response.data,
+      message: isHealthy ? 'Webhook is working correctly' : `Webhook returned ${response.status}`
+    });
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    console.error(`❌ WEBHOOK CHECK FAILED [${checkId}]`);
+    console.error(`⏱️  Duration: ${duration}ms`);
+    console.error(`💥 Error: ${error.message}`);
+    
+    if (error.code === 'ECONNREFUSED') {
+      console.error(`🔌 Connection refused - server not running`);
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+      console.error(`⏰ Request timed out`);
+    } else if (error.code === 'ENOTFOUND') {
+      console.error(`🌐 DNS lookup failed - domain not found`);
+    }
+    
+    console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    
+    res.json({
+      ...basicInfo,
+      status: 'UNREACHABLE',
+      reachable: false,
+      healthy: false,
+      responseTime: `${duration}ms`,
+      error: error.message,
+      errorCode: error.code,
+      message: `Webhook unreachable: ${error.message}`
+    });
+  }
 });
 
 app.post('/api/webhook', (req, res) => {
