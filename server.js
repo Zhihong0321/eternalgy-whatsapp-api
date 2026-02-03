@@ -13,17 +13,61 @@ const STATE_PATH = process.env.WWEBJS_STATE_PATH || '/storage/.wwebjs_state.json
 app.use(express.json());
 app.use(express.static('public'));
 
-// Webhook configuration
-let webhookUrl = process.env.WEBHOOK_URL || null;
-let webhookEnabled = !!process.env.WEBHOOK_URL;  // Auto-enable if env var is set
+// Webhook configuration - try to load from state file first, fallback to env var
+let webhookUrl = null;
+let webhookEnabled = false;
 
-// Log initial webhook state on startup
-if (webhookEnabled) {
-  console.log(`🔔 Webhook auto-configured from environment:`);
-  console.log(`   URL: ${webhookUrl}`);
-  console.log(`   Status: ENABLED`);
-} else {
-  console.log(`🔕 Webhook not configured (set WEBHOOK_URL env var to enable)`);
+// Load persisted webhook config from disk
+function loadWebhookConfig() {
+  try {
+    const state = readStateFile();
+    if (state && state.webhookUrl) {
+      webhookUrl = state.webhookUrl;
+      webhookEnabled = state.webhookEnabled || false;
+      console.log(`🔔 Webhook loaded from saved state:`);
+      console.log(`   URL: ${webhookUrl}`);
+      console.log(`   Status: ${webhookEnabled ? 'ENABLED' : 'DISABLED'}`);
+      return true;
+    }
+  } catch (err) {
+    console.log('🔕 No saved webhook config found');
+  }
+  return false;
+}
+
+// Save webhook config to disk
+function saveWebhookConfig() {
+  try {
+    const currentState = readStateFile() || {};
+    currentState.webhookUrl = webhookUrl;
+    currentState.webhookEnabled = webhookEnabled;
+    currentState.updatedAt = new Date().toISOString();
+    
+    const dir = path.dirname(STATE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(STATE_PATH, JSON.stringify(currentState, null, 2));
+    console.log(`💾 Webhook config saved to disk`);
+  } catch (err) {
+    console.error('❌ Failed to save webhook config:', err.message);
+  }
+}
+
+// Initialize webhook config
+if (!loadWebhookConfig()) {
+  // Fallback to environment variable
+  webhookUrl = process.env.WEBHOOK_URL || null;
+  webhookEnabled = !!process.env.WEBHOOK_URL;
+  
+  if (webhookEnabled) {
+    console.log(`🔔 Webhook auto-configured from environment:`);
+    console.log(`   URL: ${webhookUrl}`);
+    console.log(`   Status: ENABLED`);
+    saveWebhookConfig();
+  } else {
+    console.log(`🔕 Webhook not configured (set WEBHOOK_URL env var or use /api/webhook)`);
+  }
 }
 
 // Root route
@@ -225,17 +269,21 @@ function initWhatsApp() {
   // Message received handler - triggers webhook
   client.on('message', async (message) => {
     const receivedAt = new Date().toISOString();
+    const msgId = message.id ? message.id._serialized : 'unknown';
     
-    console.log('📨 Message received:', {
-      from: message.from,
-      body: message.body,
-      timestamp: message.timestamp,
-      receivedAt: receivedAt
-    });
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📨 MESSAGE RECEIVED EVENT');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`🆔 Message ID: ${msgId}`);
+    console.log(`👤 From: ${message.from}`);
+    console.log(`💬 Body: ${message.body || '(empty)'}`);
+    console.log(`⏰ Timestamp: ${message.timestamp}`);
+    console.log(`📊 Type: ${message.type}`);
+    console.log(`🕐 Received at: ${receivedAt}`);
+    console.log(`🔔 Webhook State: Enabled=${webhookEnabled}, URL=${webhookUrl ? 'SET' : 'NULL'}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     // Trigger webhook if enabled
-    console.log(`🔔 Webhook check - Enabled: ${webhookEnabled}, URL: ${webhookUrl ? 'SET' : 'NOT SET'}`);
-    
     if (webhookEnabled && webhookUrl) {
       const webhookStartTime = Date.now();
       const logId = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -245,22 +293,36 @@ function initWhatsApp() {
       console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       console.log(`⏰ Time: ${new Date().toISOString()}`);
       console.log(`🎯 URL: ${webhookUrl}`);
-      console.log(`📋 Webhook Status: ${webhookEnabled ? 'ENABLED' : 'DISABLED'}`);
       
       try {
-        const contact = await message.getContact();
-        const chat = await message.getChat();
+        // Get contact and chat info with error handling
+        let contact = null;
+        let chat = null;
+        
+        try {
+          contact = await message.getContact();
+          console.log(`✅ Got contact: ${contact.pushname || contact.name || 'unknown'}`);
+        } catch (contactErr) {
+          console.log(`⚠️  Could not get contact: ${contactErr.message}`);
+        }
+        
+        try {
+          chat = await message.getChat();
+          console.log(`✅ Got chat: ${chat.name || 'unknown'}, isGroup: ${chat.isGroup}`);
+        } catch (chatErr) {
+          console.log(`⚠️  Could not get chat: ${chatErr.message}`);
+        }
         
         const webhookPayload = {
           id: message.id._serialized,
           from: message.from,
-          fromName: contact.pushname || contact.name || message.from,
+          fromName: contact?.pushname || contact?.name || message.from,
           body: message.body,
           timestamp: message.timestamp,
           hasMedia: message.hasMedia,
           type: message.type,
-          isGroup: chat.isGroup,
-          chatName: chat.name
+          isGroup: chat?.isGroup || false,
+          chatName: chat?.name || message.from
         };
 
         console.log(`📦 Payload:`);
@@ -597,7 +659,10 @@ app.post('/api/webhook', (req, res) => {
   webhookUrl = url;
   webhookEnabled = true;
   
-  console.log('✅ Webhook configured:', url);
+  // Save to disk so it persists after restart
+  saveWebhookConfig();
+  
+  console.log('✅ Webhook configured and saved:', url);
   
   res.json({
     success: true,
@@ -608,7 +673,8 @@ app.post('/api/webhook', (req, res) => {
 
 app.delete('/api/webhook', (req, res) => {
   webhookEnabled = false;
-  console.log('🔕 Webhook disabled');
+  saveWebhookConfig(); // Persist the disabled state
+  console.log('🔕 Webhook disabled and saved');
   
   res.json({
     success: true,
