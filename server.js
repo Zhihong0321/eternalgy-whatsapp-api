@@ -71,8 +71,8 @@ function initWhatsApp() {
     puppeteerConfig.executablePath = executablePath;
   }
 
-  // Use /tmp for session storage (persists in Railway)
-  const sessionPath = '/tmp/.wwebjs_auth';
+  // Use Railway persistent volume for session storage (default: /storage)
+  const sessionPath = process.env.WWEBJS_AUTH_PATH || '/storage/.wwebjs_auth';
   if (!fs.existsSync(sessionPath)) {
     fs.mkdirSync(sessionPath, { recursive: true });
   }
