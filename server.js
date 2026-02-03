@@ -248,25 +248,40 @@ function initWhatsApp() {
     writeStateFile();
   });
 
+  // Track last message activity for health check
+  let lastMessageActivity = Date.now();
+  
   // DEBUG: Listen to ALL events to see what's happening
   client.on('message_create', (msg) => {
     console.log('📝 MESSAGE_CREATE event:', msg.from, msg.body?.substring(0, 30));
     console.log('   isStatus:', msg.isStatus, '| fromMe:', msg.fromMe, '| deviceType:', msg.deviceType);
+    lastMessageActivity = Date.now();
   });
 
   // Alternative event for incoming messages
   client.on('chat_new_message', (msg) => {
     console.log('💬 CHAT_NEW_MESSAGE event:', msg.from, msg.body?.substring(0, 30));
+    lastMessageActivity = Date.now();
   });
   
   // Group message event
   client.on('group_join', (notification) => {
     console.log('👥 GROUP_JOIN event:', notification.chatId);
+    lastMessageActivity = Date.now();
   });
 
   client.on('message_ack', (msg, ack) => {
     console.log('✓ MESSAGE_ACK event:', ack, msg.from);
+    lastMessageActivity = Date.now();
   });
+  
+  // Health check: Log if no message activity for 5 minutes
+  setInterval(() => {
+    const inactiveTime = Date.now() - lastMessageActivity;
+    if (inactiveTime > 5 * 60 * 1000) {
+      console.log(`⚠️  No message activity for ${Math.floor(inactiveTime/1000)}s - WhatsApp may be in zombie state`);
+    }
+  }, 60000);
 
   client.on('change_state', (state) => {
     console.log('🔄 CHANGE_STATE event:', state);
@@ -750,6 +765,45 @@ app.delete('/api/webhook', (req, res) => {
     success: true,
     enabled: false
   });
+});
+
+// Force restart - clears session and reinitializes (fix for zombie state)
+app.post('/api/restart', async (req, res) => {
+  console.log('🔄 RESTART requested - clearing session...');
+  
+  try {
+    // Destroy client
+    if (client) {
+      await client.destroy().catch(() => {});
+    }
+    
+    // Clear session folder
+    const sessionPath = AUTH_PATH;
+    if (fs.existsSync(sessionPath)) {
+      fs.rmSync(sessionPath, { recursive: true, force: true });
+      console.log('🗑️  Session folder cleared:', sessionPath);
+    }
+    
+    // Reset state
+    isReady = false;
+    qrString = null;
+    
+    res.json({
+      success: true,
+      message: 'Session cleared. WhatsApp will restart and require QR code scan.',
+      note: 'Please wait 10-20 seconds, then check /api/qr for new QR code'
+    });
+    
+    // Reinitialize after response
+    setTimeout(() => {
+      console.log('🚀 Reinitializing WhatsApp...');
+      initWhatsApp();
+    }, 2000);
+    
+  } catch (error) {
+    console.error('❌ Restart error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Start server
