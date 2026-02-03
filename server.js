@@ -248,6 +248,27 @@ function initWhatsApp() {
     writeStateFile();
   });
 
+  // DEBUG: Listen to ALL events to see what's happening
+  client.on('message_create', (msg) => {
+    console.log('📝 MESSAGE_CREATE event:', msg.from, msg.body?.substring(0, 30));
+  });
+
+  client.on('message_ack', (msg, ack) => {
+    console.log('✓ MESSAGE_ACK event:', ack, msg.from);
+  });
+
+  client.on('change_state', (state) => {
+    console.log('🔄 CHANGE_STATE event:', state);
+  });
+
+  client.on('loading_screen', (percent, message) => {
+    console.log('⏳ LOADING_SCREEN:', percent, message);
+  });
+
+  client.on('auth_failure', (msg) => {
+    console.log('🔒 AUTH_FAILURE:', msg);
+  });
+
   // Periodically check client state in case events are missed
   setInterval(async () => {
     try {
@@ -267,6 +288,8 @@ function initWhatsApp() {
   }, 5000);
 
   // Message received handler - triggers webhook
+  console.log('🔔 Registering message event listener...');
+  
   client.on('message', async (message) => {
     try {
       // Defensive: message might be malformed
@@ -279,7 +302,7 @@ function initWhatsApp() {
       const msgId = message.id?._serialized || message.id || 'unknown';
       
       console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📨 MESSAGE RECEIVED EVENT');
+      console.log('📨📨📨 MESSAGE EVENT FIRING 📨📨📨');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`🆔 Message ID: ${msgId}`);
       console.log(`👤 From: ${message.from || 'unknown'}`);
@@ -376,6 +399,10 @@ function initWhatsApp() {
     }
   });
 
+  // Log all registered event listeners
+  console.log('📋 Registered WhatsApp events:', client.eventNames());
+  
+  console.log('🚀 Initializing WhatsApp client...');
   client.initialize();
 }
 
