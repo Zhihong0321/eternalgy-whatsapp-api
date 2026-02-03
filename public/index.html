@@ -133,7 +133,7 @@ Content-Type: application/json
         async function refreshStatus() {
             try {
                 log('Checking status...');
-                const response = await fetch('/api/status');
+                const response = await fetch('/api/status', { cache: 'no-store' });
                 const data = await response.json();
                 
                 const statusDiv = document.getElementById('status');
@@ -162,14 +162,14 @@ Content-Type: application/json
 
         async function loadQR() {
             try {
-                const response = await fetch('/api/qr');
-                const data = await response.json();
-                
-                if (data.qr) {
-                    document.getElementById('qr-image').src = data.qr;
-                    document.getElementById('qr-container').style.display = 'block';
-                    log('QR code loaded');
-                } else {
+            const response = await fetch('/api/qr', { cache: 'no-store' });
+            const data = await response.json();
+            
+            if (data.qr) {
+                document.getElementById('qr-image').src = data.qr + '#t=' + Date.now();
+                document.getElementById('qr-container').style.display = 'block';
+                log('QR code loaded');
+            } else {
                     document.getElementById('qr-container').style.display = 'none';
                 }
             } catch (error) {

@@ -169,6 +169,12 @@ app.get('/api', (req, res) => {
 });
 
 app.get('/api/status', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Surrogate-Control': 'no-store'
+  });
   res.json({
     ready: isReady,
     hasQR: !!qrString
@@ -176,6 +182,12 @@ app.get('/api/status', (req, res) => {
 });
 
 app.get('/api/qr', async (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Surrogate-Control': 'no-store'
+  });
   if (!qrString) {
     return res.json({ qr: null });
   }
