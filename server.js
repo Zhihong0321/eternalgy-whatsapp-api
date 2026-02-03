@@ -251,27 +251,53 @@ function initWhatsApp() {
   // Track last message activity for health check
   let lastMessageActivity = Date.now();
   
-  // DEBUG: Listen to ALL events to see what's happening
-  client.on('message_create', (msg) => {
-    console.log('📝 MESSAGE_CREATE event:', msg.from, msg.body?.substring(0, 30));
-    console.log('   isStatus:', msg.isStatus, '| fromMe:', msg.fromMe, '| deviceType:', msg.deviceType);
+  // WEBHOOK TRIGGER - Use message_create (works for both incoming and outgoing)
+  client.on('message_create', async (msg) => {
+    console.log('📝 MESSAGE_CREATE:', msg.from, msg.body?.substring(0, 30), '| fromMe:', msg.fromMe);
     lastMessageActivity = Date.now();
-  });
+    
+    // Only trigger webhook for INCOMING messages (not from me)
+    if (!msg.fromMe && webhookEnabled && webhookUrl) {
+      const webhookStartTime = Date.now();
+      const logId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`🔔 WEBHOOK FIRE (via message_create) [${logId}]`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      
+      try {
+        const webhookPayload = {
+          id: msg.id?._serialized || 'unknown',
+          from: msg.from,
+          fromName: msg._data?.notifyName || msg.from,
+          body: msg.body,
+          timestamp: msg.timestamp,
+          hasMedia: msg.hasMedia,
+          type: msg.type,
+          isGroup: msg.from?.includes('@g.us') || false,
+          chatName: msg._data?.chatName || msg.from,
+          _source: 'message_create'
+        };
 
-  // Alternative event for incoming messages
-  client.on('chat_new_message', (msg) => {
-    console.log('💬 CHAT_NEW_MESSAGE event:', msg.from, msg.body?.substring(0, 30));
-    lastMessageActivity = Date.now();
-  });
-  
-  // Group message event
-  client.on('group_join', (notification) => {
-    console.log('👥 GROUP_JOIN event:', notification.chatId);
-    lastMessageActivity = Date.now();
+        console.log(`📦 Payload:`, JSON.stringify(webhookPayload, null, 2));
+        
+        const response = await axios.post(webhookUrl, webhookPayload, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000
+        });
+        
+        console.log(`✅ WEBHOOK SUCCESS [${logId}] - ${response.status} - ${Date.now() - webhookStartTime}ms`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+        
+      } catch (error) {
+        console.error(`❌ WEBHOOK FAILED [${logId}]: ${error.message}`);
+        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      }
+    }
   });
 
   client.on('message_ack', (msg, ack) => {
-    console.log('✓ MESSAGE_ACK event:', ack, msg.from);
+    console.log('✓ MESSAGE_ACK:', ack, msg.from);
     lastMessageActivity = Date.now();
   });
   
@@ -279,7 +305,7 @@ function initWhatsApp() {
   setInterval(() => {
     const inactiveTime = Date.now() - lastMessageActivity;
     if (inactiveTime > 5 * 60 * 1000) {
-      console.log(`⚠️  No message activity for ${Math.floor(inactiveTime/1000)}s - WhatsApp may be in zombie state`);
+      console.log(`⚠️  No message activity for ${Math.floor(inactiveTime/1000)}s`);
     }
   }, 60000);
 
@@ -312,118 +338,6 @@ function initWhatsApp() {
       // Ignore transient state errors
     }
   }, 5000);
-
-  // Message received handler - triggers webhook
-  console.log('🔔 Registering message event listener...');
-  
-  client.on('message', async (message) => {
-    try {
-      // Defensive: message might be malformed
-      if (!message) {
-        console.log('❌ MESSAGE EVENT: message is null/undefined');
-        return;
-      }
-      
-      const receivedAt = new Date().toISOString();
-      const msgId = message.id?._serialized || message.id || 'unknown';
-      
-      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📨📨📨 MESSAGE EVENT FIRING 📨📨📨');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`🆔 Message ID: ${msgId}`);
-      console.log(`👤 From: ${message.from || 'unknown'}`);
-      console.log(`💬 Body: ${message.body || '(empty)'}`);
-      console.log(`⏰ Timestamp: ${message.timestamp}`);
-      console.log(`📊 Type: ${message.type || 'unknown'}`);
-      console.log(`🕐 Received at: ${receivedAt}`);
-      console.log(`🔔 Webhook State: Enabled=${webhookEnabled}, URL=${webhookUrl ? 'SET' : 'NULL'}`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-    // Trigger webhook if enabled
-    if (webhookEnabled && webhookUrl) {
-      const webhookStartTime = Date.now();
-      const logId = Math.random().toString(36).substring(2, 10).toUpperCase();
-      
-      console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`🔔 WEBHOOK FIRE [${logId}] - START`);
-      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      console.log(`⏰ Time: ${new Date().toISOString()}`);
-      console.log(`🎯 URL: ${webhookUrl}`);
-      
-      try {
-        // Get contact and chat info with error handling
-        let contact = null;
-        let chat = null;
-        
-        try {
-          contact = await message.getContact();
-          console.log(`✅ Got contact: ${contact.pushname || contact.name || 'unknown'}`);
-        } catch (contactErr) {
-          console.log(`⚠️  Could not get contact: ${contactErr.message}`);
-        }
-        
-        try {
-          chat = await message.getChat();
-          console.log(`✅ Got chat: ${chat.name || 'unknown'}, isGroup: ${chat.isGroup}`);
-        } catch (chatErr) {
-          console.log(`⚠️  Could not get chat: ${chatErr.message}`);
-        }
-        
-        const webhookPayload = {
-          id: message.id._serialized,
-          from: message.from,
-          fromName: contact?.pushname || contact?.name || message.from,
-          body: message.body,
-          timestamp: message.timestamp,
-          hasMedia: message.hasMedia,
-          type: message.type,
-          isGroup: chat?.isGroup || false,
-          chatName: chat?.name || message.from
-        };
-
-        console.log(`📦 Payload:`);
-        console.log(JSON.stringify(webhookPayload, null, 2));
-        console.log(`🚀 Sending POST request...`);
-        
-        const response = await axios.post(webhookUrl, webhookPayload, {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 10000
-        });
-        
-        const duration = Date.now() - webhookStartTime;
-        
-        console.log(`✅ WEBHOOK SUCCESS [${logId}]`);
-        console.log(`⏱️  Duration: ${duration}ms`);
-        console.log(`📊 Response Status: ${response.status}`);
-        console.log(`📄 Response Data:`, response.data);
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-        
-      } catch (error) {
-        const duration = Date.now() - webhookStartTime;
-        
-        console.error(`❌ WEBHOOK FAILED [${logId}]`);
-        console.error(`⏱️  Duration: ${duration}ms`);
-        console.error(`💥 Error: ${error.message}`);
-        
-        if (error.response) {
-          console.error(`📊 Response Status: ${error.response.status}`);
-          console.error(`📄 Response Data:`, error.response.data);
-        } else if (error.request) {
-          console.error(`📡 No response received from server`);
-        }
-        
-        console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-      }
-    } else {
-      console.log(`🔕 Webhook skipped: ${!webhookEnabled ? 'disabled' : 'no URL configured'}`);
-    }
-    } catch (handlerError) {
-      console.error('💥💥💥 MESSAGE HANDLER CRASHED 💥💥💥');
-      console.error('Error:', handlerError.message);
-      console.error('Stack:', handlerError.stack);
-      console.error('💥💥💥 END CRASH REPORT 💥💥💥\n');
-    }
-  });
 
   // Log all registered event listeners
   console.log('📋 Registered WhatsApp events:', client.eventNames());
