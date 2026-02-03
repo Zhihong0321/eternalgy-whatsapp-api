@@ -7,6 +7,8 @@ const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const AUTH_PATH = process.env.WWEBJS_AUTH_PATH || '/storage/.wwebjs_auth';
+const STATE_PATH = process.env.WWEBJS_STATE_PATH || '/storage/.wwebjs_state.json';
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -34,22 +36,56 @@ let lastReadyAt = null;
 let lastAuthAt = null;
 let lastDisconnectAt = null;
 let lastClientState = null;
-const statePath = process.env.WWEBJS_STATE_PATH || '/storage/.wwebjs_state.json';
+
+function setNoCache(res) {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Surrogate-Control': 'no-store'
+  });
+}
+
+function getMemoryState() {
+  return {
+    ready: isReady,
+    hasQR: !!qrString,
+    qr: qrString || null,
+    lastQrAt,
+    lastReadyAt,
+    lastAuthAt,
+    lastDisconnectAt,
+    lastClientState
+  };
+}
+
+function getEffectiveState() {
+  const mem = getMemoryState();
+  if (mem.ready || mem.hasQR) return mem;
+
+  const disk = readStateFile();
+  if (!disk) return mem;
+
+  return {
+    ...mem,
+    ...disk,
+    ready: !!disk.ready,
+    hasQR: !!disk.hasQR,
+    qr: disk.qr || null
+  };
+}
 
 function writeStateFile() {
   try {
     const payload = {
-      ready: isReady,
-      hasQR: !!qrString,
-      qr: qrString || null,
-      lastQrAt,
-      lastReadyAt,
-      lastAuthAt,
-      lastDisconnectAt,
-      lastClientState,
+      ...getMemoryState(),
       updatedAt: new Date().toISOString()
     };
-    fs.writeFileSync(statePath, JSON.stringify(payload));
+    const dir = path.dirname(STATE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(STATE_PATH, JSON.stringify(payload));
   } catch (err) {
     console.error('⚠️ Failed to write state file:', err && err.message ? err.message : err);
   }
@@ -57,8 +93,8 @@ function writeStateFile() {
 
 function readStateFile() {
   try {
-    if (!fs.existsSync(statePath)) return null;
-    const raw = fs.readFileSync(statePath, 'utf8');
+    if (!fs.existsSync(STATE_PATH)) return null;
+    const raw = fs.readFileSync(STATE_PATH, 'utf8');
     return JSON.parse(raw);
   } catch (err) {
     console.error('⚠️ Failed to read state file:', err && err.message ? err.message : err);
@@ -109,7 +145,7 @@ function initWhatsApp() {
 
   // Use Railway persistent volume for session storage (default: /storage).
   // Fail fast if storage is missing or not writable.
-  const sessionPath = process.env.WWEBJS_AUTH_PATH || '/storage/.wwebjs_auth';
+  const sessionPath = AUTH_PATH;
   try {
     if (!fs.existsSync(sessionPath)) {
       fs.mkdirSync(sessionPath, { recursive: true });
@@ -241,49 +277,24 @@ app.get('/api', (req, res) => {
 });
 
 app.get('/api/status', (req, res) => {
-  res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0',
-    'Surrogate-Control': 'no-store'
-  });
-  let ready = isReady;
-  let hasQR = !!qrString;
-
-  if (!ready && !hasQR) {
-    const state = readStateFile();
-    if (state && (state.ready || state.hasQR)) {
-      ready = !!state.ready;
-      hasQR = !!state.hasQR;
-    }
-  }
-
+  setNoCache(res);
+  const state = getEffectiveState();
   res.json({
-    ready,
-    hasQR,
-    authenticated: !!lastAuthAt,
-    lastQrAt,
-    lastReadyAt,
-    lastAuthAt,
-    lastDisconnectAt,
-    lastClientState
+    ready: state.ready,
+    hasQR: state.hasQR,
+    authenticated: !!state.lastAuthAt,
+    lastQrAt: state.lastQrAt,
+    lastReadyAt: state.lastReadyAt,
+    lastAuthAt: state.lastAuthAt,
+    lastDisconnectAt: state.lastDisconnectAt,
+    lastClientState: state.lastClientState
   });
 });
 
 app.get('/api/qr', async (req, res) => {
-  res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0',
-    'Surrogate-Control': 'no-store'
-  });
-  let qrValue = qrString;
-  if (!qrValue) {
-    const state = readStateFile();
-    if (state && state.qr) {
-      qrValue = state.qr;
-    }
-  }
+  setNoCache(res);
+  const state = getEffectiveState();
+  const qrValue = state.qr;
   if (!qrValue) {
     return res.json({ qr: null });
   }
