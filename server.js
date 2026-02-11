@@ -89,6 +89,10 @@ let lastReadyAt = null;
 let lastAuthAt = null;
 let lastDisconnectAt = null;
 let lastClientState = null;
+let reinitInProgress = false;
+let lastReinitReason = null;
+let lastReinitAt = null;
+let reinitAttempts = 0;
 
 function setNoCache(res) {
   res.set({
@@ -108,7 +112,10 @@ function getMemoryState() {
     lastReadyAt,
     lastAuthAt,
     lastDisconnectAt,
-    lastClientState
+    lastClientState,
+    lastReinitReason,
+    lastReinitAt,
+    reinitAttempts
   };
 }
 
@@ -237,6 +244,7 @@ function initWhatsApp() {
     isReady = true;
     qrString = null;
     lastReadyAt = new Date().toISOString();
+    reinitAttempts = 0;
     writeStateFile();
   });
 
@@ -251,6 +259,7 @@ function initWhatsApp() {
     isReady = false;
     lastDisconnectAt = new Date().toISOString();
     writeStateFile();
+    scheduleReinit(`disconnected:${reason}`);
   });
 
   // Track last message activity for health check
@@ -328,6 +337,10 @@ function initWhatsApp() {
 
   client.on('auth_failure', (msg) => {
     console.log('🔒 AUTH_FAILURE:', msg);
+    isReady = false;
+    lastDisconnectAt = new Date().toISOString();
+    writeStateFile();
+    scheduleReinit('auth_failure');
   });
 
   // Periodically check client state in case events are missed
@@ -344,7 +357,12 @@ function initWhatsApp() {
       }
       writeStateFile();
     } catch (err) {
-      // Ignore transient state errors
+      if (isPuppeteerDetachedFrameError(err)) {
+        isReady = false;
+        lastDisconnectAt = new Date().toISOString();
+        writeStateFile();
+        scheduleReinit('state-check:detached_frame');
+      }
     }
   }, 5000);
 
@@ -353,6 +371,42 @@ function initWhatsApp() {
   
   console.log('🚀 Initializing WhatsApp client...');
   client.initialize();
+}
+
+function isPuppeteerDetachedFrameError(err) {
+  const msg = (err && err.message ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes('detached frame') ||
+    msg.includes('execution context was destroyed') ||
+    msg.includes('target closed') ||
+    msg.includes('session closed') ||
+    msg.includes('browser has disconnected') ||
+    msg.includes('protocol error')
+  );
+}
+
+function scheduleReinit(reason) {
+  if (reinitInProgress) return;
+  reinitInProgress = true;
+  lastReinitReason = reason;
+  lastReinitAt = new Date().toISOString();
+  reinitAttempts += 1;
+
+  const baseDelayMs = 2000;
+  const maxDelayMs = 30000;
+  const delayMs = Math.min(baseDelayMs * reinitAttempts, maxDelayMs);
+  console.log(`♻️  Scheduling WhatsApp reinit due to: ${reason} (delay ${delayMs}ms)`);
+
+  setTimeout(async () => {
+    try {
+      if (client) {
+        await client.destroy().catch(() => {});
+      }
+    } finally {
+      initWhatsApp();
+      reinitInProgress = false;
+    }
+  }, delayMs);
 }
 
 // API Routes
@@ -364,6 +418,7 @@ app.get('/api', (req, res) => {
     endpoints: {
       'GET /api/status': 'Check WhatsApp connection status',
       'GET /api/qr': 'Get QR code for authentication',
+      'GET /api/health': 'Deep health check (forces reinit on detached frame)',
       'POST /api/send': 'Send WhatsApp message',
       'POST /api/check-user': 'Check if phone number is WhatsApp user and get profile info',
       'GET /api/webhook': 'Get webhook configuration',
@@ -402,11 +457,48 @@ app.get('/api/status', async (req, res) => {
     lastAuthAt: state.lastAuthAt,
     lastDisconnectAt: state.lastDisconnectAt,
     lastClientState: state.lastClientState,
+    lastReinitReason: state.lastReinitReason,
+    lastReinitAt: state.lastReinitAt,
+    reinitAttempts: state.reinitAttempts,
     webhook: {
       enabled: webhookEnabled,
       url: webhookUrl ? 'SET' : 'NOT SET'
     }
   });
+});
+
+app.get('/api/health', async (req, res) => {
+  setNoCache(res);
+
+  if (!client) {
+    return res.status(503).json({
+      ok: false,
+      error: 'Client not initialized',
+      ...getEffectiveState()
+    });
+  }
+
+  try {
+    const state = await client.getState();
+    return res.json({
+      ok: true,
+      state,
+      ...getEffectiveState()
+    });
+  } catch (error) {
+    console.error('❌ Health check error:', error);
+    if (isPuppeteerDetachedFrameError(error)) {
+      isReady = false;
+      lastDisconnectAt = new Date().toISOString();
+      writeStateFile();
+      scheduleReinit('health:detached_frame');
+    }
+    return res.status(503).json({
+      ok: false,
+      error: error.message || String(error),
+      ...getEffectiveState()
+    });
+  }
 });
 
 app.get('/api/qr', async (req, res) => {
@@ -464,6 +556,12 @@ app.post('/api/send', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Send message error:', error);
+    if (isPuppeteerDetachedFrameError(error)) {
+      isReady = false;
+      lastDisconnectAt = new Date().toISOString();
+      writeStateFile();
+      scheduleReinit('send:detached_frame');
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -525,6 +623,12 @@ app.post('/api/check-user', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Check user error:', error);
+    if (isPuppeteerDetachedFrameError(error)) {
+      isReady = false;
+      lastDisconnectAt = new Date().toISOString();
+      writeStateFile();
+      scheduleReinit('check-user:detached_frame');
+    }
     res.status(500).json({ error: error.message });
   }
 });
